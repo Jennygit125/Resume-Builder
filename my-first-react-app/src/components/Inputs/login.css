@@ -1,0 +1,106 @@
+@import "tailwindcss";
+div {
+  display: grid;
+  justify-content: center;
+  align-items: center;
+  font-family: sans-serif;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-width: 50vw;
+  width: 100%;
+}
+
+.title {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #0f9fca;
+  text-align: center;
+}
+
+
+label {
+  display: block;
+  color: rgba(11, 67, 131, 0.712);
+  font-size: 1rem;
+}
+
+input {
+  padding: 0.5rem;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 1rem;
+}
+
+.inputGroup{
+    margin-bottom: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #1c42ee;
+  border-width: 0.13rem;
+}
+.options{
+   display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center; 
+  width: 100%;
+  margin-bottom: 1rem;
+  color: rgba(11, 67, 131, 0.712);
+  font-size: 1rem;}
+
+.remember{
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;                      
+  cursor: pointer;
+}
+.remember:hover{
+    color: rgb(31, 68, 230);
+}
+a{
+    font-size: 1rem;
+  text-decoration: none;
+}
+a:hover{
+    text-decoration: underline;
+    color: rgb(11, 48, 214);
+}
+.loginButton {
+  width: 100%;
+  padding: 12px;
+  background-color: rgb(102, 126, 234);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.loginButton:hover {
+  background-color: rgb(29, 61, 221);
+}
+.signUpLog{
+    color:rgba(11, 67, 131, 0.712);
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+.error{
+    color:rgba(253, 12, 4, 0.993);
+    font-size: 0.6rem;
+}
