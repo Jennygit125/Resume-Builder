@@ -6,7 +6,7 @@ export default [
   index("components/greeting.jsx"),
 
   route("dashboard", "components/Dashboard.jsx"),
-  route("dashboard/new", "components/Inputs/resumeInput.jsx"),
+  route("dashboard/new", "components/Inputs/ResumeInput.jsx"),
   route("auth", "pages/Auth/LoginPage.jsx"),
 
   route("about", "pages/About.jsx"),
