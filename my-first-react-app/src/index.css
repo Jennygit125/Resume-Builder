@@ -1,18 +1,33 @@
 @import "tailwindcss";
 
-@theme{
-  --font-display: ;
-  --color-primary: ;
-  --color-secondary: ;
-}
+@theme {
+  /* Customizing your colors */
+  --color-brand-blue: #0f9fca;
+  --color-auth-blue: rgba(11, 67, 131, 0.712);
+  --color-button-hover: rgb(29, 61, 221);
 
-@layer base{
-body{
-  html {
-    font-family: var(--font-display);
+  /* Customizing fonts */
+  --font-sans: "Inter", ui-sans-serif, system-ui;
+
+  /* Adding a custom spacing scale */
+  --spacing-128: 32rem;
+
+  --animate-classy-fade: classy-fade 0.8s ease-out forwards;
+  @keyframes classy-fade {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  background-color: aliceblue;
-  overflow-x: hidden;
-}
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  @apply font-sans bg-gray-50 text-gray-900;
+}
+
+/* Import your template-specific styles */
+@import "./components/Templates/Runners.css";

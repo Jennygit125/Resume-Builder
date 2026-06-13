@@ -104,3 +104,5 @@ a:hover{
     color:rgba(253, 12, 4, 0.993);
     font-size: 0.6rem;
 }
+/* DEPRECATED: All styles have been moved to login.css */
+/* You can safely delete this file once the imports in AuthContainer.jsx are verified. */

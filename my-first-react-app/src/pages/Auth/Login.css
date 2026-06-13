@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@theme {
+  /* Self-contained theme variables for Auth components */
+  --color-brand-blue: #0f9fca;
+  --color-auth-blue: rgba(11, 67, 131, 0.712);
+  --color-button-hover: rgb(29, 61, 221);
+
+  /* Consistent font stack */
+  --font-sans: "Inter", ui-sans-serif, system-ui;
+
+  /* Animation definitions */
+  --animate-classy-fade: classy-fade 0.8s ease-out forwards;
+  @keyframes classy-fade {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Page Layout */
+.login-page-wrapper {
+  @apply min-h-screen flex items-center justify-center bg-gray-100 p-4 sm:p-6 lg:p-8 font-sans;
+}
+
+.login-card {
+  @apply flex flex-col lg:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden max-w-6xl w-full;
+}
+
+/* Left Side: Marketing Panel */
+.login-marketing-side {
+  @apply hidden lg:flex lg:w-1/2 p-8 sm:p-12 flex-col justify-center text-center lg:text-left bg-gradient-to-br from-brand-blue to-blue-700 text-white;
+}
+
+.marketing-title {
+  @apply text-4xl font-extrabold mb-4 animate-classy-fade;
+}
+
+.marketing-text {
+  @apply text-lg leading-relaxed mb-6 animate-classy-fade opacity-0;
+  animation-delay: 200ms;
+}
+
+.marketing-list {
+  @apply text-left mx-auto lg:mx-0 mb-8 space-y-3 text-lg animate-classy-fade opacity-0;
+  animation-delay: 400ms;
+}
+
+.marketing-list li {
+  @apply flex items-center;
+}
+
+.marketing-list svg {
+  @apply w-6 h-6 mr-3 text-white;
+}
+
+.marketing-footer {
+  @apply text-sm text-blue-100 animate-classy-fade opacity-0;
+  animation-delay: 600ms;
+}
+
+/* Right Side: Auth Container */
+.login-auth-side {
+  @apply lg:w-1/2 p-8 sm:p-12 flex items-center justify-center bg-white;
+}
+
+/* Auth Components (Forms) */
+form {
+  @apply flex flex-col justify-between items-center w-full max-w-md mx-auto;
+}
+
+.title {
+  @apply mb-6 text-3xl font-extrabold text-brand-blue text-center;
+}
+
+.inputGroup {
+  @apply mb-4 w-full flex flex-col;
+}
+
+.inputGroup label {
+  @apply block text-auth-blue text-sm font-semibold mb-1 text-left w-full;
+}
+
+.password-wrapper {
+  @apply relative w-full;
+}
+
+.password-toggle {
+  @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-blue transition-colors cursor-pointer bg-transparent border-none p-1 flex items-center justify-center;
+}
+
+.inputGroup input {
+  @apply w-full p-3 pr-12 border border-gray-200 rounded-xl text-base box-border transition-all focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-blue-100;
+}
+
+.options {
+  @apply flex justify-between gap-4 items-center w-full mb-6 text-auth-blue text-sm;
+}
+
+.remember {
+  @apply flex items-center gap-2 cursor-pointer hover:text-brand-blue transition-colors;
+}
+
+.loginButton {
+  @apply w-full py-3 px-4 bg-brand-blue text-white rounded-xl font-bold transition-all hover:bg-button-hover disabled:opacity-50 shadow-md hover:shadow-lg active:scale-95;
+}
+
+.signUpLog {
+  @apply text-auth-blue text-sm font-medium mt-6 hover:text-brand-blue hover:underline cursor-pointer bg-transparent border-none w-full text-center;
+}
+
+.error {
+  @apply text-red-500 text-xs mt-1 font-medium text-left w-full;
+}
+
+.link-button {
+  @apply text-sm text-auth-blue font-medium hover:text-brand-blue hover:underline bg-transparent border-none cursor-pointer;
+}
+
+.history-log {
+  @apply mt-8 w-full text-left border-t border-gray-100 pt-6;
+}
+
+.history-log h3 {
+  @apply text-xs font-bold text-gray-400 uppercase tracking-wider mb-3;
+}
+
+.history-log ul {
+  @apply text-xs text-gray-500 space-y-2;
+}
+
+.social-divider {
+  @apply w-full flex items-center gap-4 my-6 text-gray-400 text-xs uppercase font-bold animate-classy-fade opacity-0;
+  @apply before:content-[''] before:flex-1 before:h-px before:bg-gray-100 after:content-[''] after:flex-1 after:h-px after:bg-gray-100;
+  animation-delay: 400ms;
+}
+
+.social-group {
+  @apply flex flex-col sm:flex-row gap-3 w-full animate-classy-fade opacity-0;
+  animation-delay: 600ms;
+}
+
+.social-btn {
+  @apply flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all active:scale-95 shadow-sm;
+}
+
+.success-banner {
+  @apply w-full p-3 mb-4 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-medium text-center animate-classy-fade;
+}
+
+.login-error {
+  @apply w-full p-3 mb-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm font-medium text-center animate-classy-fade;
+}
+
+.progress-container {
+  @apply w-full mb-6 flex flex-col gap-2 animate-classy-fade;
+}
+
+.progress-bar {
+  @apply h-1.5 bg-brand-blue rounded-full transition-all duration-1000 ease-linear shadow-[0_0_8px_rgba(15,159,202,0.4)];
+}
+
+.progress-container::before {
+  content: '';
+  @apply absolute w-full h-1.5 bg-gray-100 rounded-full -z-10;
+}
+
+.progress-text {
+  @apply text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center;
+}
