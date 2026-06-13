@@ -2,9 +2,9 @@
 
 @theme {
   /* Customizing your colors */
-  --color-brand-blue: #0f9fca;
-  --color-auth-blue: rgba(11, 67, 131, 0.712);
-  --color-button-hover: rgb(29, 61, 221);
+  --color-brand-blue: #0f8fca;
+  --color-auth-blue: rgba(12, 67, 131, 0.712);
+  --color-button-hover: rgb(30, 61, 221);
 
   /* Customizing fonts */
   --font-sans: "Inter", ui-sans-serif, system-ui;

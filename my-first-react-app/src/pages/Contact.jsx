@@ -6,7 +6,7 @@ export default function Contact() {
       <div className="bg-gray-50 p-8 rounded-2xl border border-gray-100 max-w-md mx-auto">
         <p className="text-lg font-medium mb-2">Email us at:</p>
         <a href="mailto:support@resumerunner.com" className="text-brand-blue text-2xl font-bold hover:underline">
-          support@resumerunner.com
+          thrill.codex@gmail.com
         </a>
       </div>
     </div>
