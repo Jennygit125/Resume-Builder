@@ -2,7 +2,7 @@ import {useState} from 'react';
 import LoginForm from '../../components/Inputs/login';
 import SignUpForm from '../../components/Inputs/signUp';
 import ForgotForm from '../../components/Inputs/Forgot'
-import './login.css'
+import './Login.css'
 const AuthContainer = () => {
     const [authMode, setAuthMode] = useState('login');
     const [prefilledUsername, setPrefilledUsername] = useState('');
