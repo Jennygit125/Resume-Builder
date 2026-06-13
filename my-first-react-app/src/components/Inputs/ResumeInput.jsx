@@ -670,116 +670,110 @@ export default function EditResume() {
           className="resume-preview-wrapper"
           style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
         >
-          <div 
-            className="resume-preview-wrapper"
-            style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-          >
-            <div className="resume-paper" id="resume-paper-target" ref={resumeRef}>
-              <header className="preview-header">
-                <h1 className="preview-name">
-                  {resumeData.firstName || "Your"} {resumeData.lastName || "Name"}
-                </h1>
-                <p className="preview-job-title">{resumeData.jobTitle || "Professional Title"}</p>
-                <div className="preview-contact-grid">
-                  <div className="contact-item">{resumeData.email || "hello@example.com"}</div>
-                  {resumeData.phone && <div className="contact-item">{resumeData.phone}</div>}
-                  {resumeData.location && <div className="contact-item">{resumeData.location}</div>}
-                  {resumeData.linkedIn && <div className="contact-item">{resumeData.linkedIn}</div>}
-                  {resumeData.github && <div className="contact-item">{resumeData.github}</div>}
-                  {resumeData.portfolio && <div className="contact-item">{resumeData.portfolio}</div>}
-                </div>
-              </header>
+          <div className="resume-paper" id="resume-paper-target" ref={resumeRef}>
+            <header className="preview-header">
+              <h1 className="preview-name">
+                {resumeData.firstName || "Your"} {resumeData.lastName || "Name"}
+              </h1>
+              <p className="preview-job-title">{resumeData.jobTitle || "Professional Title"}</p>
+              <div className="preview-contact-grid">
+                <div className="contact-item">{resumeData.email || "hello@example.com"}</div>
+                {resumeData.phone && <div className="contact-item">{resumeData.phone}</div>}
+                {resumeData.location && <div className="contact-item">{resumeData.location}</div>}
+                {resumeData.linkedIn && <div className="contact-item">{resumeData.linkedIn}</div>}
+                {resumeData.github && <div className="contact-item">{resumeData.github}</div>}
+                {resumeData.portfolio && <div className="contact-item">{resumeData.portfolio}</div>}
+              </div>
+            </header>
 
-              <div className="preview-body-layout">
-                {/* Main Column */}
-                <div className="preview-main-column">
+            <div className="preview-body-layout">
+              {/* Main Column */}
+              <div className="preview-main-column">
+                <section className="mb-8">
+                  <h2 className="preview-section-title">Professional Profile</h2>
+                  <p className="preview-text">{resumeData.summary || "Summary goes here..."}</p>
+                </section>
+
+                {resumeData.experience.length > 0 && (
                   <section className="mb-8">
-                    <h2 className="preview-section-title">Professional Profile</h2>
-                    <p className="preview-text">{resumeData.summary || "Summary goes here..."}</p>
+                    <h2 className="preview-section-title border-b border-gray-100 pb-1">Experience</h2>
+                    <div className="space-y-6 mt-4">
+                      {resumeData.experience.map((exp, index) => (
+                        <div key={index} className="animate-classy-fade">
+                          <div className="preview-item-header">
+                            <h3 className="preview-item-title">{exp.role || "Job Title"}</h3>
+                            <span className="preview-date">{exp.startDate} — {exp.isCurrent ? "Present" : exp.endDate}</span>
+                          </div>
+                          <div className="preview-item-subtitle mb-2">{exp.company}{exp.location && `, ${exp.location}`}</div>
+                          <p className="preview-text !text-[11px]">{exp.description}</p>
+                        </div>
+                      ))}
+                    </div>
                   </section>
+                )}
 
-                  {resumeData.experience.length > 0 && (
-                    <section className="mb-8">
-                      <h2 className="preview-section-title border-b border-gray-100 pb-1">Experience</h2>
-                      <div className="space-y-6 mt-4">
-                        {resumeData.experience.map((exp, index) => (
-                          <div key={index} className="animate-classy-fade">
-                            <div className="preview-item-header">
-                              <h3 className="preview-item-title">{exp.role || "Job Title"}</h3>
-                              <span className="preview-date">{exp.startDate} — {exp.isCurrent ? "Present" : exp.endDate}</span>
-                            </div>
-                            <div className="preview-item-subtitle mb-2">{exp.company}{exp.location && `, ${exp.location}`}</div>
-                            <p className="preview-text !text-[11px]">{exp.description}</p>
+                {resumeData.projects.length > 0 && (
+                  <section className="mb-8">
+                    <h2 className="preview-section-title border-b border-gray-100 pb-1">Key Projects</h2>
+                    <div className="space-y-4 mt-4">
+                      {resumeData.projects.map((proj, index) => (
+                        <div key={index} className="animate-classy-fade">
+                          <div className="preview-item-header">
+                            <h3 className="preview-item-title text-sm">{proj.title || "Project Title"}</h3>
+                            {proj.link && <span className="preview-date underline text-brand-blue">{proj.link}</span>}
                           </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                          <p className="preview-text !text-[11px]">{proj.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
 
-                  {resumeData.projects.length > 0 && (
-                    <section className="mb-8">
-                      <h2 className="preview-section-title border-b border-gray-100 pb-1">Key Projects</h2>
-                      <div className="space-y-4 mt-4">
-                        {resumeData.projects.map((proj, index) => (
-                          <div key={index} className="animate-classy-fade">
-                            <div className="preview-item-header">
-                              <h3 className="preview-item-title text-sm">{proj.title || "Project Title"}</h3>
-                              {proj.link && <span className="preview-date underline text-brand-blue">{proj.link}</span>}
-                            </div>
-                            <p className="preview-text !text-[11px]">{proj.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                </div>
+              {/* Sidebar Column */}
+              <div className="preview-sidebar">
+                {resumeData.skills.length > 0 && (
+                  <section className="mb-8">
+                    <h2 className="preview-section-title">Skills</h2>
+                    <div className="flex flex-col gap-2">
+                      {resumeData.skills.map((skill, index) => (
+                        <div key={index} className="text-[11px] font-bold text-gray-700 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-brand-blue rounded-full" />
+                          {skill}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-                {/* Sidebar Column */}
-                <div className="preview-sidebar">
-                  {resumeData.skills.length > 0 && (
-                    <section className="mb-8">
-                      <h2 className="preview-section-title">Skills</h2>
-                      <div className="flex flex-col gap-2">
-                        {resumeData.skills.map((skill, index) => (
-                          <div key={index} className="text-[11px] font-bold text-gray-700 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-brand-blue rounded-full" />
-                            {skill}
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                {resumeData.education.length > 0 && (
+                  <section className="mb-8">
+                    <h2 className="preview-section-title">Education</h2>
+                    <div className="space-y-5">
+                      {resumeData.education.map((edu, index) => (
+                        <div key={index} className="animate-classy-fade">
+                          <div className="font-bold text-gray-900 text-xs leading-tight mb-1">{edu.degree || "Degree"}</div>
+                          <div className="text-brand-blue font-bold text-[10px] leading-tight mb-1">{edu.school}</div>
+                          <div className="text-gray-400 text-[9px] font-black uppercase tracking-tighter">{edu.startDate} — {edu.endDate}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-                  {resumeData.education.length > 0 && (
-                    <section className="mb-8">
-                      <h2 className="preview-section-title">Education</h2>
-                      <div className="space-y-5">
-                        {resumeData.education.map((edu, index) => (
-                          <div key={index} className="animate-classy-fade">
-                            <div className="font-bold text-gray-900 text-xs leading-tight mb-1">{edu.degree || "Degree"}</div>
-                            <div className="text-brand-blue font-bold text-[10px] leading-tight mb-1">{edu.school}</div>
-                            <div className="text-gray-400 text-[9px] font-black uppercase tracking-tighter">{edu.startDate} — {edu.endDate}</div>
-                          </div>
-                        ))}
-                      </div>
+                {resumeData.customSections.map((sec, index) => (
+                  sec.title && (
+                    <section key={index} className="mb-8 animate-classy-fade">
+                      <h2 className="preview-section-title">{sec.title}</h2>
+                      <p className="preview-text !text-[10px]">{sec.description}</p>
                     </section>
-                  )}
-
-                  {resumeData.customSections.map((sec, index) => (
-                    sec.title && (
-                      <section key={index} className="mb-8 animate-classy-fade">
-                        <h2 className="preview-section-title">{sec.title}</h2>
-                        <p className="preview-text !text-[10px]">{sec.description}</p>
-                      </section>
-                    )
-                  ))}
-                </div>
+                  )
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }
