@@ -1,5 +1,6 @@
 import "./index.css";
 import {
+  type LinksFunction,
   type MetaFunction,
   Links,
   Meta,
@@ -16,10 +17,15 @@ export const meta: MetaFunction = () => {
     { title: "Resume Builder" },
     { name: "description", content: "Create and edit your professional resume easily." },
     { property: "og:title", content: "Resume Builder" },
-    { property: "og:image", content: "/cheque-svgrepo-com.svg" },
+    { property: "og:image", content: "/svgrepo.png" },
     { name: "twitter:card", content: "summary_large_image" },
   ];
 };
+
+export const links: LinksFunction = () => [
+  { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+];
 
 /**
  * Makes user data globally available to all routes and the Header.
@@ -34,7 +40,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <Meta />
         <Links />
