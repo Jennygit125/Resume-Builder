@@ -30,7 +30,7 @@ export const meta: MetaFunction = () => {
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: "Resume Builder" },
     { name: "twitter:description", content: "Create and edit your professional resume easily." },
-    { name: "twitter:image", content: "https://first-react-ryjt.vercel.app/og:image.png" },
+    { name: "twitter:image", content: "https://first-react-ryjt.vercel.app/og-image.png" },
     { name: "theme-color", content: "#2563eb" }, // Match this to your brand color
   ];
 };
