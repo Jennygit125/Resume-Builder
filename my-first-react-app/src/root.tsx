@@ -20,7 +20,7 @@ export const meta: MetaFunction = () => {
     { name: "robots", content: "index, follow" },
     { property: "og:title", content: "Resume Builder" },
     { property: "og:description", content: "Create and edit your professional resume easily." },
-    { property: "og:image", content: "/og:image.png" },
+    { property: "og:image", content: "https://first-react-ryjt.vercel.app/og-image.png" },
     { property: "og:image:width", content: "1200" },
     { property: "og:image:height", content: "630" },
     { property: "og:url", content: "https://first-react-ryjt.vercel.app" },
