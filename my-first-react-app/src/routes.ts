@@ -1,4 +1,4 @@
-import { type RouteConfig, route, index, redirect } from "@react-router/dev/routes";
+import { type RouteConfig, route, index } from "@react-router/dev/routes";
 
 export default [
   // The Index route (home)

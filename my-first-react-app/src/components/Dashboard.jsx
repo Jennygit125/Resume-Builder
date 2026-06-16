@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLoaderData, useNavigate, redirect, Link, useRevalidator } from "react-router";
 import { useLogout } from "../utils/auth.js";
 import { requireAuth, handleAuthError } from "../utils/authGuard.js";
-import { api } from '../../utils/api.js';
+import { api } from '../utils/api.js';
 
 
 /**
@@ -102,7 +102,6 @@ export async function clientLoader() {
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const logout = useLogout();
   const loaderData = useLoaderData(); // Get data from the loader
   const revalidator = useRevalidator();
