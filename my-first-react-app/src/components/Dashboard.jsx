@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useLoaderData, useNavigate, redirect, Link, useRevalidator } from "react-router";
-import { useLogout, isTokenExpired } from "../utils/auth.js";
-import { api } from "./api.js";
+import { useLogout } from "../utils/auth.js";
+import { requireAuth, handleAuthError } from "../utils/authGuard.js";
+import { api } from '../../utils/api.js';
 
 
 /**
@@ -66,35 +67,38 @@ const DashboardSkeleton = () => (
  * This is the modern way to protect routes
  */
 export async function clientLoader() {
-  const accessToken = localStorage.getItem("access_token");
-  const refreshToken = localStorage.getItem("refresh_token");
-  const firstName = localStorage.getItem("first_name");
+  // requireAuth handles token validation and redirection globally
+  const { firstName } = await requireAuth();
+  const MAX_RETRIES = 3;
+  let lastError;
 
- 
- 
-  // Basic Auth Gate
-  if (!accessToken || !firstName) {
-    throw redirect("/auth");
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const [resumes, stats] = await Promise.all([
+        api.getResumes(),
+        api.getDashboardStats()
+      ]);
+      
+      // If successful, return the data immediately
+      return { firstName, resumes, stats, hasError: false };
+    } catch (error) {
+      lastError = error;
+      console.warn(`Dashboard fetch attempt ${attempt}/${MAX_RETRIES} failed.`);
+      
+      // If we have attempts left, wait a bit before trying again
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
   }
 
-  // Auto-logout if the session is unrecoverable (Refresh token expired)
-  if (refreshToken && isTokenExpired(refreshToken)) {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("first_name");
-    throw redirect("/auth");
-  }
-
-  try {
-    const [resumes, stats] = await Promise.all([
-      api.getResumes(),
-      api.getDashboardStats()
-    ]);
-    return { firstName, resumes, stats };
-  } catch (error) {
-    console.error("Failed to load dashboard data:", error);
-    return { firstName, resumes: [], stats: { total: 0, downloads: 0, views: 0 } };
-  }
+  // If we reach here, all retries failed
+  return handleAuthError(lastError).catch(() => ({ 
+    firstName, 
+    resumes: [], 
+    stats: { total: 0, downloads: 0, views: 0 },
+    hasError: true
+  }));
 }
 
 export default function Dashboard() {
@@ -113,7 +117,37 @@ export default function Dashboard() {
     return <DashboardSkeleton />;
   }
 
-  const { firstName, resumes, stats } = loaderData;
+  const { firstName, resumes, stats, hasError } = loaderData;
+
+  if (hasError) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-classy-fade">
+        <div className="bg-app-card rounded-3xl shadow-xl border border-red-100 p-12 text-center flex flex-col items-center justify-center space-y-6">
+          <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-app-text tracking-tight mb-2">Connection Issue</h2>
+            <p className="text-gray-500 max-w-md mx-auto">We couldn't load your dashboard data. The server might be waking up or there's a network problem.</p>
+          </div>
+          <button 
+            onClick={() => revalidator.revalidate()} 
+            disabled={revalidator.state === "loading"}
+            className="px-8 py-3 bg-brand-blue text-white font-bold rounded-xl shadow-lg hover:bg-button-hover transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+          >
+            {revalidator.state === "loading" ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            )}
+            {revalidator.state === "loading" ? "Retrying..." : "Retry Connection"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAiAction = async () => {
     // Logic for AI generation call

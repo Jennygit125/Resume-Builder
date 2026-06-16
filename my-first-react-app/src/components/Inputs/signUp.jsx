@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { api } from '../../utils/api.js';
+import { api } from '../../utils/api.js'; // Already correct, no change needed.
 
 const SignUpForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -54,9 +54,10 @@ const SignUpForm = ({ onSwitch }) => {
     e.preventDefault();
     if (validateForm()) {
       try {
-        // Mapping UI 'username' to backend 'email' as per your backend contract
+        // Ensure we send the actual email and username to the backend
         const response = await api.post('/signUp', {
-          email: formData.username,
+          username: formData.username,
+          email: formData.email,
           password: formData.password
         });
 

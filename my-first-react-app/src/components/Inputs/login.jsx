@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { useNavigate, useRevalidator } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useRevalidator, useSearchParams } from 'react-router';
 import { api } from '../../utils/api.js';
 
 function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
     const navigate = useNavigate();
     const revalidator = useRevalidator();
+    const [searchParams] = useSearchParams();
     const [username, setUsername] = useState(defaultUsername || '');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -13,6 +14,14 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
   const [loginHistory, setLoginHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Check for session expired message
+  const isSessionExpired = searchParams.get('message') === 'session_expired';
+
+  // Sync username if registration provides a default value after mount
+  useEffect(() => {
+    if (defaultUsername) setUsername(defaultUsername);
+  }, [defaultUsername]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevents page reload on login
@@ -29,7 +38,11 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
     }, 1000);
 
     try {
-      const response = await api.post('/signIn', { email: username, password });
+      const response = await api.post('/signIn', { 
+        email: username, 
+        password,
+        rememberMe // Pass flag to backend to issue long-lived refresh tokens
+      });
 
       // Safety check: if apiFetch returned null (401 handled globally)
       if (!response) return;
@@ -73,6 +86,11 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
             <form onSubmit={handleSubmit}>
 
                 {successMessage && <div className="success-banner">{successMessage}</div>}
+                {isSessionExpired && !loginError && (
+                  <div className="login-error" style={{ backgroundColor: '#fff4f4', color: '#d32f2f', border: '1px solid #ffcdd2' }}>
+                    Your session has expired. Please log in again to continue.
+                  </div>
+                )}
                 {loginError && <div className="login-error">{loginError}</div>}
 
                 <h2 className="title">Login</h2>

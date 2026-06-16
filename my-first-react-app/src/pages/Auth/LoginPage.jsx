@@ -1,10 +1,5 @@
 import AuthContainer from "./AuthContainer";
 
-/**
- * Guard for the auth page. If a valid session exists, redirect to dashboard
- * before the login content is rendered.
- */
-
 
 export default function LoginPage() {
   return (

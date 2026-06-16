@@ -8,7 +8,8 @@ export const UserProvider = ({ children }) => {
   // Hydrate user from localStorage on mount
   useEffect(() => {
     const firstName = localStorage.getItem("first_name");
-    if (firstName) {
+    const token = localStorage.getItem("access_token");
+    if (firstName && token) {
       setUser({ firstName });
     }
   }, []);

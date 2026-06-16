@@ -1,12 +1,14 @@
 import { type RouteConfig, route, index, redirect } from "@react-router/dev/routes";
-import { isTokenExpired, refreshAccessToken } from "./utils/auth";
 
 export default [
   // The Index route (home)
   index("components/greeting.jsx"),
+  // Protected Dashboard Group
+  route("dashboard", "components/AuthGuard.jsx", [
+    index("components/Dashboard.jsx"),
+    route("new", "components/Inputs/ResumeInput.jsx"),
+  ]),
 
-  route("dashboard", "components/Dashboard.jsx"),
-  route("dashboard/new", "components/Inputs/ResumeInput.jsx"),
   route("auth", "pages/Auth/LoginPage.jsx"),
 
   route("about", "pages/About.jsx"),

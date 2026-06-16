@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useRouteLoaderData, useLocation } from "react-router"; // Import useLocation
-import { useLogout } from "../../utils/auth.js"; // Add .js extension
+import { useLogout, getTokenExp, refreshAccessToken } from "../../utils/auth.js"; // Add .js extension
 import { useTheme } from "../context/ThemeContext.jsx";
 import logo from "../../assets/cheque-svgrepo-com.svg";
 
@@ -13,6 +13,8 @@ const navLinks = [
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [sessionWarning, setSessionWarning] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(null);
   const headerRef = useRef(null);
   const logout = useLogout();
   const { isDarkMode, toggleTheme } = useTheme();
@@ -20,7 +22,10 @@ function Header() {
 
   // Access the user data defined in the root clientLoader (src/root.tsx)
   const rootData = useRouteLoaderData("root");
-  const firstName = rootData?.firstName;
+  
+  // Logic fix: Only treat as logged in if we have a name AND a token.
+  // This prevents showing 'Logout' when localStorage has stale name data but no active session.
+  const isUserLoggedIn = !!(rootData?.firstName && localStorage.getItem("access_token"));
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
@@ -48,7 +53,57 @@ function Header() {
     };
   }, [isMenuOpen]);
 
+  // Session Expiration Monitoring
+  useEffect(() => {
+    if (!isUserLoggedIn) {
+      setSessionWarning(false);
+      return;
+    }
+
+    const checkSession = () => {
+      const token = localStorage.getItem("access_token");
+      const exp = getTokenExp(token);
+      if (!exp) return;
+
+      const remaining = Math.round((exp - Date.now()) / 1000);
+      setSecondsLeft(remaining);
+
+      // Warn if less than 120 seconds (2 minutes)
+      if (remaining > 0 && remaining <= 120) {
+        setSessionWarning(true);
+      } else {
+        setSessionWarning(false);
+      }
+    };
+
+    const interval = setInterval(checkSession, 1000); // Update every second for the countdown
+    checkSession();
+
+    return () => clearInterval(interval);
+  }, [isUserLoggedIn]);
+
+  const handleExtendSession = async () => {
+    try {
+      await refreshAccessToken();
+      setSessionWarning(false);
+    } catch (err) {
+      logout();
+    }
+  };
+
   return (
+    <>
+    {sessionWarning && (
+      <div className="bg-orange-500 text-white text-xs font-bold py-2 px-4 flex justify-center items-center gap-4 animate-in slide-in-from-top duration-300">
+        <span>⚠️ Your session expires in {Math.floor(secondsLeft / 60)}:{(secondsLeft % 60).toString().padStart(2, '0')}</span>
+        <button 
+          onClick={handleExtendSession}
+          className="bg-white text-orange-600 px-3 py-1 rounded-md hover:bg-orange-50 transition-colors"
+        >
+          Extend Session
+        </button>
+      </div>
+    )}
     <header className="site-header" ref={headerRef}>
       <div className="header-logo">
         <Link to="/"><img src={logo} alt="Company Logo" className="logo-img" /></Link>
@@ -88,6 +143,14 @@ function Header() {
             </li>
           ))}
           
+          {isUserLoggedIn && (
+            <li>
+              <NavLink to="/dashboard" onClick={closeMenu} className="nav-link" viewTransition>
+                Dashboard
+              </NavLink>
+            </li>
+          )}
+          
           <li className="md:ml-4 flex items-center justify-center">
             <button
               onClick={toggleTheme}
@@ -107,7 +170,7 @@ function Header() {
           </li>
 
           <li className="md:ml-4">
-            {firstName ? (
+            {isUserLoggedIn ? (
               <button 
                 onClick={() => {
                   logout();
@@ -118,7 +181,7 @@ function Header() {
                 Logout
               </button>
             ) : (
-              <NavLink to="/auth" className="header-btn active:scale-95" onClick={closeMenu}>
+              <NavLink to="/auth" className="header-btn active:scale-95 w-full md:w-auto text-center block" onClick={closeMenu}>
                 Login
               </NavLink>
             )}
@@ -126,6 +189,7 @@ function Header() {
         </ul>
       </nav>
     </header>
+    </>
   );
 }
 export default Header;

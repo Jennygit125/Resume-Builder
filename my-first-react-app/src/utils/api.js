@@ -1,3 +1,5 @@
+import { isTokenExpired, refreshAccessToken } from "./auth.js";
+
 /**
  * A wrapper around fetch that automatically adds the Bearer token
  * and handles base URL configuration.
@@ -58,12 +60,25 @@ export async function apiFetch(endpoint, options = {}) {
       }
 
       if (response.status === 401) {
+        // Attempt to silent refresh before giving up
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (refreshToken && !isTokenExpired(refreshToken)) {
+          try {
+            const newToken = await refreshAccessToken();
+            // Update the header for the retry attempt
+            config.headers["Authorization"] = `Bearer ${newToken}`;
+            continue; // Jump back to the start of the while loop to retry the fetch
+          } catch (refreshError) {
+            console.error("Silent refresh failed:", refreshError);
+          }
+        }
+
         console.warn("Unauthorized request. Redirecting to login...");
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("first_name");
         localStorage.removeItem("username");
-        window.location.href = "/auth";
+        window.location.href = "/auth?message=session_expired";
         return null;
       }
 
@@ -93,8 +108,29 @@ export async function apiFetch(endpoint, options = {}) {
  * Convenience methods for common HTTP verbs
  */
 export const api = {
-  get: (url, options) => apiFetch(url, { ...options, method: "GET" }),
+  get: (url, options) => apiFetch(url, { ...options, method: "GET" }).then(res => res?.json()),
   post: (url, body, options) => apiFetch(url, { ...options, method: "POST", body: JSON.stringify(body) }),
-  put: (url, body, options) => apiFetch(url, { ...options, method: "PUT", body: JSON.stringify(body) }),
-  delete: (url, options) => apiFetch(url, { ...options, method: "DELETE" }),
+  put: (url, body, options) => apiFetch(url, { ...options, method: "PUT", body: JSON.stringify(body) }).then(res => res?.json()),
+  delete: (url, options) => apiFetch(url, { ...options, method: "DELETE" }).then(res => res?.json()),
+
+  // Resume Operations
+  getResumes: () => api.get('/resumes'),
+  
+  getDashboardStats: () => api.get('/stats/dashboard'),
+
+  deleteResume: (id) => api.delete(`/resumes/${id}`),
+
+  saveResume: (resumeData) => api.post('/resumes', resumeData).then(res => res?.json()),
+
+  // AI Integration
+  generateAiResume: (prompt) => 
+    apiFetch('/ai/generate', { 
+      method: 'POST', 
+      body: JSON.stringify({ prompt }) 
+    }).then(res => res?.json()),
+
+  analyzeResume: (resumeId) => 
+    apiFetch(`/ai/analyze/${resumeId}`, { 
+      method: 'POST' 
+    }).then(res => res?.json()),
 };

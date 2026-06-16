@@ -1,12 +1,21 @@
-import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 
-// Register fonts if needed, or use standard ones
+// Register a modern font family
+Font.register({
+  family: 'Inter',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/inter/Inter-Regular.ttf', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/inter/Inter-Bold.ttf', fontWeight: 700 },
+    { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/inter/Inter-ExtraBold.ttf', fontWeight: 900 },
+  ]
+});
+
 const styles = StyleSheet.create({
   page: {
     padding: 40,
     fontSize: 11,
     color: 'rgb(51, 51, 51)',
-    fontFamily: 'Helvetica',
+    fontFamily: 'Inter',
   },
   header: {
     textAlign: 'center',

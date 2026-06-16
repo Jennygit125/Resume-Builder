@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import ResumePreview from '../../pages/ResumeUpdate/Forms/PreviewRsme.jsx';
 import { InputGroup, InputGrid, DynamicListSection } from './FormHelpers.jsx';
 
+
 const initialState = {
   firstName: "",
   lastName: "",

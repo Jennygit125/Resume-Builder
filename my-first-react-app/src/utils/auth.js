@@ -14,6 +14,20 @@ export const isTokenExpired = (token) => {
   }
 };
 
+/**
+ * Returns the expiration timestamp in milliseconds from a JWT token.
+ */
+export const getTokenExp = (token) => {
+  if (!token) return null;
+  try {
+    const [, payloadBase64] = token.split('.');
+    const payload = JSON.parse(atob(payloadBase64));
+    return payload.exp * 1000;
+  } catch {
+    return null;
+  }
+};
+
 // Global variable to hold the single refresh promise to prevent race conditions
 let refreshPromise = null;
 
