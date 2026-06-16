@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import About from "../pages/About";
 import Services from "../pages/Services";
 import Contact from "../pages/Contact";
+import previewImg from "../assets/preview-img.avif";
 
 function Greeting() {
   return (
@@ -32,7 +33,7 @@ function Greeting() {
           </div>
         </div>
         <div className="mt-16 max-w-5xl mx-auto rounded-t-2xl shadow-2xl border-x border-t border-gray-100 overflow-hidden">
-          <img src="/src/assets/preview-img.avif" alt="Resume Editor Preview" className="w-full opacity-90" />
+          <img src={previewImg} alt="Resume Editor Preview" className="w-full opacity-90" />
         </div>
       </section>
 

@@ -71,5 +71,5 @@ body {
 
 /* Import template-specific styles after theme/utilities so @apply works correctly */
 @import "./components/Inputs/ResumeInput.css";
-@import "./pages/ResumeUpdate/Forms/preview.css";
+@import "./pages/ResumeUpdate/Forms/Preview.css";
 @import "./components/Templates/Runners.css";
