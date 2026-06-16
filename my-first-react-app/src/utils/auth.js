@@ -1,4 +1,5 @@
 import { useNavigate, useRevalidator, redirect } from "react-router";
+import { supabase } from "./api.js";
 
 /**
  * Checks if a JWT token is expired by decoding its payload.
@@ -36,25 +37,21 @@ let refreshPromise = null;
  */
 export async function refreshAccessToken() {
   if (refreshPromise) return refreshPromise;
-
-  const refreshToken = localStorage.getItem("refresh_token");
-  if (!refreshToken) {
-    localStorage.clear();
-    throw redirect("/auth");
-  }
-
+  
   refreshPromise = (async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-      if (!response.ok) throw new Error("Refresh failed");
-      const data = await response.json();
-      localStorage.setItem("access_token", data.accessToken || data.token);
-      localStorage.setItem("refresh_token", data.refreshToken);
-      return data.accessToken || data.token;
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      
+      if (data.session) {
+        localStorage.setItem("access_token", data.session.access_token);
+        localStorage.setItem("refresh_token", data.session.refresh_token);
+        return data.session.access_token;
+      }
+      throw new Error("No session returned");
+    } catch (err) {
+      localStorage.clear();
+      throw redirect("/auth?message=session_expired");
     } finally {
       refreshPromise = null;
     }

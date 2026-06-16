@@ -1,5 +1,6 @@
 import { Outlet } from "react-router";
 import { requireAuth } from "../utils/authGuard.js";
+import FloatingAiAssistant from "./FloatingAiAssistant.jsx";
 
 /**
  * A layout component that enforces authentication via its loader.
@@ -12,5 +13,10 @@ export async function clientLoader() {
 export default function AuthGuard() {
   // Protection happens in the loader; this component just renders the 
   // matched child route (e.g., Dashboard, Profile, etc.)
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <FloatingAiAssistant />
+    </>
+  );
 }

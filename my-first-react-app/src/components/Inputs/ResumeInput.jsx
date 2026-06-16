@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
+import { api } from '../../utils/api.js';
 import ResumePreview from '../../pages/ResumeUpdate/Forms/PreviewRsme.jsx';
 import { InputGroup, InputGrid, DynamicListSection } from './FormHelpers.jsx';
 
@@ -26,20 +27,52 @@ const initialState = {
 
 export default function EditResume() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [resumeData, setResumeData] = useState(initialState);
   const [errors, setErrors] = useState({});
   const resumeRef = useRef(null);
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'success' | 'error'
   const [zoom, setZoom] = useState(0.8); // Default zoom level
   const [activeView, setActiveView] = useState('form'); // 'form' or 'preview'
 
   const [skillInput, setSkillInput] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [isImprovingSummary, setIsImprovingSummary] = useState(false);
+  const [previousSummary, setPreviousSummary] = useState(null);
+  const [showUndo, setShowUndo] = useState(false);
 
-  // Persistence: Load draft from localStorage on mount
+  // Data Hydration Logic
   useEffect(() => {
-    const savedDraft = localStorage.getItem("resume_draft");
-    if (savedDraft) {
-      setResumeData(JSON.parse(savedDraft));
-    }
+    const loadData = async () => {
+      if (id) {
+        // Fetch from Supabase if we have an ID
+        try {
+          const resume = await api.getResumeById(id);
+          if (resume) {
+            setResumeData({ ...resume.content, id: resume.id });
+          }
+        } catch (err) {
+          console.error("Failed to load resume:", err);
+          setErrors({ global: "Could not load the resume from the server." });
+        }
+      } else {
+        // Otherwise check for local draft (only for "New" resumes)
+        const savedDraft = localStorage.getItem("resume_draft");
+        if (savedDraft) setResumeData(JSON.parse(savedDraft));
+      }
+    };
+    loadData();
+  }, [id]);
+
+  // Load Cloudinary Widget Script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://upload-widget.cloudinary.com/global/all.js";
+    script.async = true;
+    document.body.appendChild(script);
+    
+    return () => document.body.removeChild(script);
   }, []);
 
   // Persistence: Auto-save to localStorage on every change
@@ -96,14 +129,81 @@ export default function EditResume() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSaveAndExit = () => {
+  const handleSaveAndExit = async () => {
     if (validateForm()) {
-      // Logic to sync with backend would go here
-      localStorage.removeItem("resume_draft"); // Clear draft on successful save
-      navigate("/dashboard");
+      setSaveStatus('saving');
+      try {
+        await api.saveResume(resumeData);
+        setSaveStatus('success');
+        localStorage.removeItem("resume_draft"); // Clear draft on successful save
+        
+        // Allow the user to see the success state before navigating
+        setTimeout(() => navigate("/dashboard"), 1500);
+      } catch (err) {
+        console.error("Save failed:", err);
+        setSaveStatus('error');
+        // Reset error status after a few seconds so user can try again
+        setTimeout(() => setSaveStatus(null), 3000);
+      }
     } else {
       // Scroll to top to see error messages
       document.querySelector('.form-column')?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsAiGenerating(true);
+    setSaveStatus('saving'); // Reuse toast for "working" feedback
+    
+    try {
+      const data = await api.generateAiResume(aiPrompt);
+      if (data) {
+        setResumeData(prev => ({ ...prev, ...data }));
+        setSaveStatus('success');
+        setAiPrompt(""); // Clear prompt on success
+      }
+    } catch (err) {
+      console.error("AI Generation failed:", err);
+      setSaveStatus('error');
+    } finally {
+      setIsAiGenerating(false);
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
+  const handleImproveSummary = async () => {
+    if (!resumeData.summary.trim()) return;
+    
+    setIsImprovingSummary(true);
+    setSaveStatus('saving');
+    
+    try {
+      const currentSummary = resumeData.summary;
+      const improvedText = await api.improveText(currentSummary);
+      if (improvedText) {
+        setPreviousSummary(currentSummary);
+        setResumeData(prev => ({ ...prev, summary: improvedText }));
+        setSaveStatus('success');
+        setShowUndo(true);
+        // Auto-hide Undo button after 8 seconds
+        setTimeout(() => setShowUndo(false), 8000);
+      }
+    } catch (err) {
+      console.error("Summary improvement failed:", err);
+      setSaveStatus('error');
+    } finally {
+      setIsImprovingSummary(false);
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
+  const handleUndoSummary = () => {
+    if (previousSummary !== null) {
+      setResumeData(prev => ({ ...prev, summary: previousSummary }));
+      setPreviousSummary(null);
+      setShowUndo(false);
     }
   };
 
@@ -114,56 +214,50 @@ export default function EditResume() {
     setResumeData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleProfilePicChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // 1. Validate File Type
-    if (!file.type.startsWith('image/')) {
-      setErrors(prev => ({ ...prev, profilePic: "Please upload a valid image (PNG, JPG, WebP)." }));
+  const openUploadWidget = () => {
+    if (!window.cloudinary) {
+      setErrors(prev => ({ ...prev, profilePic: "Upload service not ready. Please try again." }));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_SIDE = 400; // Target resolution for profile pic
-        let width = img.width;
-        let height = img.height;
-
-        // Calculate new dimensions keeping aspect ratio
-        if (width > height) {
-          if (width > MAX_SIDE) {
-            height *= MAX_SIDE / width;
-            width = MAX_SIDE;
-          }
-        } else {
-          if (height > MAX_SIDE) {
-            width *= MAX_SIDE / height;
-            height = MAX_SIDE;
+    window.cloudinary.openUploadWidget(
+      {
+        cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+        uploadPreset: import.meta.env.VITE_CLOUDINARY_PRESET,
+        sources: ['local', 'url', 'camera'],
+        multiple: false,
+        cropping: true,
+        croppingAspectRatio: 1,
+        showSkipCropButton: false,
+        styles: {
+          palette: {
+            window: "#FFFFFF",
+            sourceBg: "#F4F4F5",
+            windowBorder: "#90A0B3",
+            tabIcon: "#0F8FCA",
+            inactiveTabIcon: "#6E7075",
+            menuIcons: "#0F8FCA",
+            link: "#0F8FCA",
+            action: "#0F8FCA",
+            inProgress: "#0078FF",
+            complete: "#20B832",
+            error: "#E52424",
+            textDark: "#000000",
+            textLight: "#FFFFFF"
           }
         }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // 2. Compress and convert to JPEG (0.7 quality is standard for balance)
-        const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        
-        setResumeData(prev => ({ ...prev, profilePic: optimizedBase64 }));
-        setErrors(prev => {
-          const n = { ...prev };
-          delete n.profilePic;
-          return n;
-        });
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+      },
+      (error, result) => {
+        if (!error && result && result.event === "success") {
+          setResumeData(prev => ({ ...prev, profilePic: result.info.secure_url }));
+          setErrors(prev => {
+            const n = { ...prev };
+            delete n.profilePic;
+            return n;
+          });
+        }
+      }
+    );
   };
 
   const handleSkillKeyDown = (e) => {
@@ -263,14 +357,46 @@ export default function EditResume() {
             <button 
               type="button" 
               onClick={handleSaveAndExit} 
-              className="save-exit-link bg-transparent border-none cursor-pointer"
+              disabled={saveStatus === 'saving'}
+              className="save-exit-link bg-transparent border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save & Exit
+              {saveStatus === 'saving' ? 'Saving...' : 'Save & Exit'}
             </button>
           </div>
         </div>
 
         <form className="resume-form">
+          {/* AI Resume Builder Section */}
+          <section className="mb-10 p-6 bg-purple-50/50 rounded-3xl border border-purple-100">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-purple-600 text-white rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.464 15.05a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0z" /></svg>
+              </div>
+              <h3 className="text-lg font-black text-purple-900 tracking-tight">AI Quick-Fill</h3>
+            </div>
+            <p className="text-sm text-purple-700/70 mb-4 leading-relaxed">
+              Paste a job description or your career history. Our AI will automatically structure and fill out the resume for you.
+            </p>
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="e.g., I am a Senior Frontend Developer with experience in React and Node. Generate a resume targeted for a Lead Engineer position..."
+              className="w-full h-32 p-4 bg-white border border-purple-100 rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm resize-none mb-4 shadow-inner"
+            />
+            <button
+              type="button"
+              onClick={handleAiGenerate}
+              disabled={isAiGenerating || !aiPrompt.trim()}
+              className="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
+            >
+              {isAiGenerating ? (
+                'Magic in progress...'
+              ) : (
+                'Generate Resume Content'
+              )}
+            </button>
+          </section>
+
           {/* Profile Picture */}
           <section>
             <h3 className="section-label">Profile Picture</h3>
@@ -285,16 +411,14 @@ export default function EditResume() {
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleProfilePicChange} 
-                  id="profilePicInput" 
-                  className="hidden" 
-                />
-                <label htmlFor="profilePicInput" className="text-xs font-bold text-brand-blue cursor-pointer hover:text-button-hover transition-colors">
+                <button
+                  type="button"
+                  onClick={openUploadWidget}
+                  className="text-xs font-bold text-brand-blue cursor-pointer hover:text-button-hover transition-colors bg-transparent border-none p-0 text-left"
+                >
                   {resumeData.profilePic ? "Change Photo" : "Upload Photo"}
-                </label>
+                </button>
+
                 {resumeData.profilePic && (
                   <button type="button" onClick={() => setResumeData(prev => ({...prev, profilePic: ""}))} className="text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors text-left bg-transparent border-none cursor-pointer">Remove</button>
                 )}
@@ -398,7 +522,28 @@ export default function EditResume() {
 
           {/* Professional Summary */}
           <section>
-            <h3 className="section-label">Summary</h3>
+            <div className="section-header-row">
+              <h3 className="section-label !mb-0">Summary</h3>
+              <div className="flex items-center gap-3">
+                {showUndo && (
+                  <button 
+                    type="button" 
+                    onClick={handleUndoSummary}
+                    className="text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-all flex items-center gap-1 animate-classy-fade"
+                  >
+                    ↺ Undo
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  onClick={handleImproveSummary}
+                  disabled={isImprovingSummary || !resumeData.summary.trim()}
+                  className="text-[10px] font-black uppercase tracking-wider text-purple-600 hover:text-purple-700 disabled:opacity-30 transition-all flex items-center gap-1"
+                >
+                  {isImprovingSummary ? 'Magic...' : '✨ Improve with AI'}
+                </button>
+              </div>
+            </div>
             <InputGroup>
               <textarea 
                 name="summary" 
@@ -577,6 +722,24 @@ export default function EditResume() {
         setZoom={setZoom}
         resumeRef={resumeRef}
       />
+
+      {/* Toast Notification */}
+      {saveStatus && (
+        <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 animate-classy-fade ${
+          saveStatus === 'saving' ? 'bg-white border-app-border text-app-text' :
+          saveStatus === 'success' ? 'bg-green-50 border-green-100 text-green-700' :
+          'bg-red-50 border-red-100 text-red-700'
+        }`}>
+          {saveStatus === 'saving' && <div className="w-4 h-4 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />}
+          {saveStatus === 'success' && <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+          {saveStatus === 'error' && <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          <span className="font-bold text-sm">
+            {saveStatus === 'saving' ? 'Saving your progress...' : 
+             saveStatus === 'success' ? 'Resume saved successfully!' : 
+             'Failed to save. Please try again.'}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

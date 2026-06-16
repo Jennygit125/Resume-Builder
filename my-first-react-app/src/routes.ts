@@ -7,6 +7,7 @@ export default [
   route("dashboard", "components/AuthGuard.jsx", [
     index("components/Dashboard.jsx"),
     route("new", "components/Inputs/ResumeInput.jsx"),
+    route("edit/:id", "components/Inputs/ResumeInput.jsx"),
   ]),
 
   route("auth", "pages/Auth/LoginPage.jsx"),

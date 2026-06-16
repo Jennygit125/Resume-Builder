@@ -1,0 +1,1 @@
+import{n as e}from"./authGuard-DVyL7r7z.js";async function t(){return await e()}export{t as clientLoader};

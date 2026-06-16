@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { api } from '../../utils/api.js'; // Already correct, no change needed.
+import { api, supabase } from '../../utils/api.js';
 
 const SignUpForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({
@@ -54,14 +54,19 @@ const SignUpForm = ({ onSwitch }) => {
     e.preventDefault();
     if (validateForm()) {
       try {
-        // Ensure we send the actual email and username to the backend
-        const response = await api.post('/signUp', {
-          username: formData.username,
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          options: {
+            data: {
+              firstName: formData.username,
+            }
+          }
         });
 
-        if (response && response.ok) {
+        if (error) throw error;
+
+        if (data.user) {
           // Pass the identifier back to pre-fill the login form's primary field
           onSwitch(e, formData.username, 'Registration successful! Please login with your new account.');
         }

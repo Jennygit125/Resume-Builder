@@ -1,33 +1,44 @@
+
+
 # API Documentation
 
-This application uses **Supabase** for database, authentication, and edge logic.
+All endpoints are prefixed with the base URL defined in `VITE_API_BASE_URL`.
 
 ## Authentication
-(Handled via `@supabase/supabase-js`)
 
 ### Login
-- **Method:** `supabase.auth.signInWithPassword()`
-- **Required:** `email`, `password`
+- **Endpoint:** `POST /signIn`
+- **Payload:** `{ "email": "user@example.com", "password": "...", "rememberMe": boolean }`
+- **Response (200 OK):**
+  ```json
+  {
+    "user": { "firstName": "John", "email": "john@example.com" },
+    "token": "JWT_ACCESS_TOKEN",
+    "refreshToken": "JWT_REFRESH_TOKEN"
+  }
+  ```
 
 ### Sign Up
-- **Method:** `supabase.auth.signUp()`
-- **Required:** `email`, `password`, `options.data.firstName`
+- **Endpoint:** `POST /signUp`
+- **Payload:** `{ "username": "johndoe", "email": "john@example.com", "password": "..." }`
+- **Response (201 Created):** `{ "success": true }`
 
 ### Token Refresh
-- **Method:** Handled automatically by the Supabase client session manager.
+- **Endpoint:** `POST /refresh`
+- **Payload:** `{ "refreshToken": "..." }`
+- **Response (200 OK):** `{ "accessToken": "...", "refreshToken": "..." }`
 
 ---
 
 ## Resumes
-**Table:** `public.resumes`
 
 ### List Resumes
-- **Client Call:** `api.getResumes()`
-- **RLS:** Users can only select rows where `user_id = auth.uid()`
-- **Response:**
+- **Endpoint:** `GET /resumes`
+- **Headers:** `Authorization: Bearer <token>`
+- **Response (200 OK):**
   ```json
   [
-    { "id": "uuid", "title": "Software Engineer", "last_modified": "ISO-DATE", "status": "Completed" }
+    { "id": "1", "title": "Software Engineer", "lastModified": "2h ago", "status": "Completed" }
   ]
   ```
 

@@ -80,7 +80,7 @@ export async function clientLoader() {
       ]);
       
       // If successful, return the data immediately
-      return { firstName, resumes, stats, hasError: false };
+      return { firstName, resumes, stats, hasError: false, syncedAt: new Date().toISOString() };
     } catch (error) {
       lastError = error;
       console.warn(`Dashboard fetch attempt ${attempt}/${MAX_RETRIES} failed.`);
@@ -97,7 +97,8 @@ export async function clientLoader() {
     firstName, 
     resumes: [], 
     stats: { total: 0, downloads: 0, views: 0 },
-    hasError: true
+    hasError: true,
+    syncedAt: null
   }));
 }
 
@@ -111,12 +112,24 @@ export default function Dashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
   // Safety Guard: Handle initial hydration where loader data might be null
   if (!loaderData) {
     return <DashboardSkeleton />;
   }
 
-  const { firstName, resumes, stats, hasError } = loaderData;
+  const { firstName, resumes, stats, hasError, syncedAt } = loaderData;
 
   if (hasError) {
     return (
@@ -154,6 +167,15 @@ export default function Dashboard() {
     alert("AI is crafting your resume. You will be notified when it's ready!");
   };
 
+  const handleDuplicate = async (resumeId) => {
+    try {
+      await api.duplicateResume(resumeId);
+      revalidator.revalidate();
+    } catch (error) {
+      console.error("Duplicate failed:", error);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -174,7 +196,14 @@ export default function Dashboard() {
           <h1 className="text-3xl font-extrabold text-app-text tracking-tight">
             Welcome, <span className="text-brand-blue">{firstName}</span>!
           </h1>
-          <p className="text-gray-500 mt-1">Manage your professional resumes and track your applications.</p>
+          <p className="text-gray-500 mt-1 flex items-center gap-2">
+            Manage your professional resumes and track your applications.
+            {syncedAt && (
+              <span className="hidden sm:inline-flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-tight bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                Last synced: {formatTime(syncedAt)}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setIsAiModalOpen(true)} className="px-5 py-2.5 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 hover:scale-105 transition-all active:scale-95 text-sm flex items-center gap-2">
@@ -235,7 +264,7 @@ export default function Dashboard() {
                   <td className="px-8 py-5">
                     <div className="font-bold text-app-text group-hover:text-brand-blue transition-colors cursor-pointer">{resume.title}</div>
                   </td>
-                  <td className="px-8 py-5 text-sm text-gray-500">{resume.lastModified}</td>
+                  <td className="px-8 py-5 text-sm text-gray-500">{formatDate(resume.last_modified)}</td>
                   <td className="px-8 py-5">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       resume.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
@@ -246,7 +275,18 @@ export default function Dashboard() {
                   <td className="px-8 py-5 text-right">
                     <div className="flex justify-end gap-2">
                       <button className="p-2 text-gray-400 hover:text-brand-blue transition-colors" title="Analyze"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg></button>
-                      <button className="p-2 text-gray-400 hover:text-brand-blue transition-colors" title="Edit"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                      <Link to={`/dashboard/edit/${resume.id}`} className="p-2 text-gray-400 hover:text-brand-blue transition-colors" title="Edit">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </Link>
+                      <button 
+                        onClick={() => handleDuplicate(resume.id)}
+                        className="p-2 text-gray-400 hover:text-brand-blue transition-colors" 
+                        title="Duplicate"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                        </svg>
+                      </button>
                       <button 
                         onClick={() => { setDeleteTarget(resume); setIsDeleteModalOpen(true); }}
                         className="p-2 text-gray-400 hover:text-red-600 transition-colors" 
