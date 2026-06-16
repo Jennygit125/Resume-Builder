@@ -3,6 +3,7 @@ import { useLoaderData, useNavigate, redirect, Link, useRevalidator } from "reac
 import { useLogout, isTokenExpired } from "../utils/auth.js";
 import { api } from "./api.js";
 
+
 /**
  * Loading Skeleton that matches the Dashboard layout
  */
@@ -69,11 +70,8 @@ export async function clientLoader() {
   const refreshToken = localStorage.getItem("refresh_token");
   const firstName = localStorage.getItem("first_name");
 
-  // Bypass for testing
-  if (firstName === "Tester") {
-    return { firstName: "Tester", resumes: [], stats: { total: 0, downloads: 0, views: 0 } };
-  }
-
+ 
+ 
   // Basic Auth Gate
   if (!accessToken || !firstName) {
     throw redirect("/auth");

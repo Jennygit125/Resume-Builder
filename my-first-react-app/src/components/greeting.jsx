@@ -32,7 +32,7 @@ function Greeting() {
           </div>
         </div>
         <div className="mt-16 max-w-5xl mx-auto rounded-t-2xl shadow-2xl border-x border-t border-gray-100 overflow-hidden">
-          <img src="/resume-preview.jpg" alt="Resume Editor Preview" className="w-full opacity-90" />
+          <img src="/src/assets/preview-img.avif" alt="Resume Editor Preview" className="w-full opacity-90" />
         </div>
       </section>
 
