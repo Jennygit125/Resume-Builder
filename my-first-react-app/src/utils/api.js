@@ -5,7 +5,11 @@ import { isTokenExpired, refreshAccessToken } from "./auth.js";
  * and handles base URL configuration.
  */
 export async function apiFetch(endpoint, options = {}) {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  // Fallback to empty string for relative paths. 
+  // On Vercel, if your backend is in the /api directory, VITE_API_BASE_URL should be set to "/api" 
+  // or left empty if the endpoint includes the /api prefix.
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+  
   const accessToken = localStorage.getItem("access_token");
 
   // MOCK BYPASS: Return immediate success for login and Tester requests to prevent server connection loop and redirects
@@ -37,16 +41,22 @@ export async function apiFetch(endpoint, options = {}) {
   };
 
   const startTime = Date.now();
-  const TIMEOUT_LIMIT = 60000;
+  // Standard 60s limit for wake-up cycles. 
+  // Note: Vercel Hobby tier serverless functions timeout at 10s.
+  const TIMEOUT_LIMIT = 60000; 
 
   while (Date.now() - startTime < TIMEOUT_LIMIT) {
     const controller = new AbortController();
     const remainingTime = TIMEOUT_LIMIT - (Date.now() - startTime);
     const timeoutId = setTimeout(() => controller.abort(), remainingTime);
 
+    // Robust URL joining to prevent double slashes or missing slashes
+    // This ensures compatibility with Vercel's API directory routing
+    const fullUrl = `${API_BASE_URL.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
+
     try {
-      console.log(`🚀 Fetching (${Math.round((Date.now() - startTime) / 1000)}s): ${API_BASE_URL}${endpoint}`);
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      console.log(`🚀 Fetching (${Math.round((Date.now() - startTime) / 1000)}s): ${fullUrl}`);
+      const response = await fetch(fullUrl, {
         ...config,
         signal: controller.signal,
       });

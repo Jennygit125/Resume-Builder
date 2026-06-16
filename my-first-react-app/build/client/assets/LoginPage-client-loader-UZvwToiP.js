@@ -1,1 +1,0 @@
-import{E as e}from"./chunk-6CSD65Y2-oeW-knXF.js";async function t(){if(localStorage.getItem(`first_name`)===`Tester`)throw e(`/dashboard`);return null}export{t as clientLoader};
