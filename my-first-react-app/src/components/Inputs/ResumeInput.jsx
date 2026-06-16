@@ -1,8 +1,7 @@
-import { useState, useRef } from 'react';
-import { Link } from 'react-router';
-import html2canvas from 'html2canvas-pro';
-import { jsPDF } from 'jspdf';
-import './ResumeInput.css';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import ResumePreview from '../../pages/ResumeUpdate/Forms/PreviewRsme.jsx';
+import { InputGroup, InputGrid, DynamicListSection } from './FormHelpers.jsx';
 
 const initialState = {
   firstName: "",
@@ -19,20 +18,151 @@ const initialState = {
   experience: [],
   education: [],
   projects: [],
-  customSections: []
+  customSections: [],
+  profilePic: "",
+  certifications: []
 };
 
 export default function EditResume() {
+  const navigate = useNavigate();
   const [resumeData, setResumeData] = useState(initialState);
+  const [errors, setErrors] = useState({});
   const resumeRef = useRef(null);
   const [zoom, setZoom] = useState(0.8); // Default zoom level
   const [activeView, setActiveView] = useState('form'); // 'form' or 'preview'
 
   const [skillInput, setSkillInput] = useState("");
 
+  // Persistence: Load draft from localStorage on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("resume_draft");
+    if (savedDraft) {
+      setResumeData(JSON.parse(savedDraft));
+    }
+  }, []);
+
+  // Persistence: Auto-save to localStorage on every change
+  useEffect(() => {
+    localStorage.setItem("resume_draft", JSON.stringify(resumeData));
+  }, [resumeData]);
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Validate Personal Details
+    if (!resumeData.firstName.trim()) newErrors.firstName = "Required";
+    if (!resumeData.lastName.trim()) newErrors.lastName = "Required";
+    if (!resumeData.email.trim()) {
+      newErrors.email = "Required";
+    } else if (!/\S+@\S+\.\S+/.test(resumeData.email)) {
+      newErrors.email = "Invalid email";
+    }
+
+    // Validate Experience
+    const experienceErrors = resumeData.experience.map(exp => {
+      const errs = {};
+      if (!exp.role.trim()) errs.role = "Title required";
+      if (!exp.company.trim()) errs.company = "Company required";
+      if (!exp.startDate.trim()) errs.startDate = "Start date required";
+      return errs;
+    });
+    if (experienceErrors.some(err => Object.keys(err).length > 0)) {
+      newErrors.experience = experienceErrors;
+    }
+
+    // Validate Education
+    const educationErrors = resumeData.education.map(edu => {
+      const errs = {};
+      if (!edu.school.trim()) errs.school = "School required";
+      if (!edu.degree.trim()) errs.degree = "Degree required";
+      return errs;
+    });
+    if (educationErrors.some(err => Object.keys(err).length > 0)) {
+      newErrors.education = educationErrors;
+    }
+
+    // Validate Certifications
+    const certErrors = resumeData.certifications.map(cert => {
+      const errs = {};
+      if (!cert.name.trim()) errs.name = "Required";
+      return errs;
+    });
+    if (certErrors.some(err => Object.keys(err).length > 0)) {
+      newErrors.certifications = certErrors;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveAndExit = () => {
+    if (validateForm()) {
+      // Logic to sync with backend would go here
+      localStorage.removeItem("resume_draft"); // Clear draft on successful save
+      navigate("/dashboard");
+    } else {
+      // Scroll to top to see error messages
+      document.querySelector('.form-column')?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Clear error when user types
+    if (errors[name]) setErrors(prev => { const n = {...prev}; delete n[name]; return n; });
     setResumeData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProfilePicChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // 1. Validate File Type
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, profilePic: "Please upload a valid image (PNG, JPG, WebP)." }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIDE = 400; // Target resolution for profile pic
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate new dimensions keeping aspect ratio
+        if (width > height) {
+          if (width > MAX_SIDE) {
+            height *= MAX_SIDE / width;
+            width = MAX_SIDE;
+          }
+        } else {
+          if (height > MAX_SIDE) {
+            width *= MAX_SIDE / height;
+            height = MAX_SIDE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 2. Compress and convert to JPEG (0.7 quality is standard for balance)
+        const optimizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        
+        setResumeData(prev => ({ ...prev, profilePic: optimizedBase64 }));
+        setErrors(prev => {
+          const n = { ...prev };
+          delete n.profilePic;
+          return n;
+        });
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSkillKeyDown = (e) => {
@@ -53,89 +183,39 @@ export default function EditResume() {
     }));
   };
 
-  const addExperience = () => {
+  // Generalized logic for adding items to any dynamic section
+  const addItem = (section, template) => {
     setResumeData(prev => ({
       ...prev,
-      experience: [...prev.experience, { company: "", role: "", location: "", startDate: "", endDate: "", isCurrent: false, description: "" }]
+      [section]: [...prev[section], template]
     }));
   };
 
-  const handleExperienceChange = (index, e) => {
+  const handleDynamicChange = (section, index, e) => {
     const { name, value, type, checked } = e.target;
     const val = type === 'checkbox' ? checked : value;
-    const updatedExperience = [...resumeData.experience];
-    // Defensive copying of the specific object being modified
-    updatedExperience[index] = { ...updatedExperience[index], [name]: val };
-    setResumeData(prev => ({ ...prev, experience: updatedExperience }));
+
+    // Clear dynamic error when user types
+    if (errors[section]?.[index]?.[name]) {
+      setErrors(prev => {
+        const updatedSectionErrors = [...prev[section]];
+        delete updatedSectionErrors[index][name];
+        return { ...prev, [section]: updatedSectionErrors };
+      });
+    }
+
+    setResumeData(prev => {
+      const updatedArray = [...prev[section]];
+      updatedArray[index] = { ...updatedArray[index], [name]: val };
+      return { ...prev, [section]: updatedArray };
+    });
   };
 
-  const removeExperience = (index) => {
+  // Generalized logic for removing items from any dynamic section
+  const removeItem = (section, index) => {
     setResumeData(prev => ({
       ...prev,
-      experience: prev.experience.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addEducation = () => {
-    setResumeData(prev => ({
-      ...prev,
-      education: [...prev.education, { school: "", degree: "", location: "", startDate: "", endDate: "" }]
-    }));
-  };
-
-  const handleEducationChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedEducation = [...resumeData.education];
-    updatedEducation[index] = { ...updatedEducation[index], [name]: value };
-    setResumeData(prev => ({ ...prev, education: updatedEducation }));
-  };
-
-  const removeEducation = (index) => {
-    setResumeData(prev => ({
-      ...prev,
-      education: prev.education.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addProject = () => {
-    setResumeData(prev => ({
-      ...prev,
-      projects: [...prev.projects, { title: "", link: "", description: "" }]
-    }));
-  };
-
-  const handleProjectChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedProjects = [...resumeData.projects];
-    updatedProjects[index] = { ...updatedProjects[index], [name]: value };
-    setResumeData(prev => ({ ...prev, projects: updatedProjects }));
-  };
-
-  const removeProject = (index) => {
-    setResumeData(prev => ({
-      ...prev,
-      projects: prev.projects.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addCustomSection = () => {
-    setResumeData(prev => ({
-      ...prev,
-      customSections: [...prev.customSections, { title: "", description: "" }]
-    }));
-  };
-
-  const handleCustomSectionChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedSections = [...resumeData.customSections];
-    updatedSections[index] = { ...updatedSections[index], [name]: value };
-    setResumeData(prev => ({ ...prev, customSections: updatedSections }));
-  };
-
-  const removeCustomSection = (index) => {
-    setResumeData(prev => ({
-      ...prev,
-      customSections: prev.customSections.filter((_, i) => i !== index)
+      [section]: prev[section].filter((_, i) => i !== index)
     }));
   };
 
@@ -149,51 +229,16 @@ export default function EditResume() {
 
     if (window.confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
       setResumeData({ ...initialState });
+      localStorage.removeItem("resume_draft");
       setSkillInput("");
     }
   };
 
-  const handleDownloadPDF = async () => {
-    const element = document.getElementById('resume-paper-target');
-    if (!element) return;
-
-    try {
-      const canvas = await html2canvas(element, {
-        scale: 2, // 2 is optimal for performance vs sharpness
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          // CRITICAL: Reset transform on the cloned element so capture is 1:1
-          const clonedElement = clonedDoc.getElementById('resume-paper-target');
-          if (clonedElement) {
-            clonedElement.style.transform = 'none';
-          }
-        }
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      // Map high-res canvas dimensions back to A4 mm units
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-      pdf.save(`${resumeData.firstName || 'Resume'}_${resumeData.lastName || ''}.pdf`);
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-    }
-  };
-
   return (
-    <div className="resume-editor-container">
+    <div 
+      className="resume-editor-container" 
+      style={{ '--resume-zoom': zoom }}
+    >
       {/* Left Side: Side Form */}
       <div className={`form-column custom-scrollbar ${activeView === 'preview' ? 'hidden lg:block' : 'block'}`}>
         <div className="form-header">
@@ -214,19 +259,54 @@ export default function EditResume() {
             >
               Clear
             </button>
-            <Link to="/dashboard" className="save-exit-link">
+            <button 
+              type="button" 
+              onClick={handleSaveAndExit} 
+              className="save-exit-link bg-transparent border-none cursor-pointer"
+            >
               Save & Exit
-            </Link>
+            </button>
           </div>
         </div>
 
         <form className="resume-form">
+          {/* Profile Picture */}
+          <section>
+            <h3 className="section-label">Profile Picture</h3>
+            <div className="flex items-center gap-6 mb-8 p-4 bg-app-bg/30 rounded-2xl border border-dashed border-app-border">
+              <div className="relative group">
+                {resumeData.profilePic ? (
+                  <img src={resumeData.profilePic} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-brand-blue shadow-sm" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-app-bg flex items-center justify-center border-2 border-dashed border-app-border">
+                    <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleProfilePicChange} 
+                  id="profilePicInput" 
+                  className="hidden" 
+                />
+                <label htmlFor="profilePicInput" className="text-xs font-bold text-brand-blue cursor-pointer hover:text-button-hover transition-colors">
+                  {resumeData.profilePic ? "Change Photo" : "Upload Photo"}
+                </label>
+                {resumeData.profilePic && (
+                  <button type="button" onClick={() => setResumeData(prev => ({...prev, profilePic: ""}))} className="text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors text-left bg-transparent border-none cursor-pointer">Remove</button>
+                )}
+                {errors.profilePic && <span className="text-[10px] text-red-500 font-bold animate-classy-fade">{errors.profilePic}</span>}
+              </div>
+            </div>
+          </section>
+
           {/* Personal Information */}
           <section>
             <h3 className="section-label">Personal Details</h3>
-            <div className="input-grid">
-              <div className="input-group">
-                <label className="input-label">First Name</label>
+            <InputGrid>
+              <InputGroup label="First Name" error={errors.firstName}>
                 <input 
                   name="firstName" 
                   placeholder="e.g. John" 
@@ -234,9 +314,8 @@ export default function EditResume() {
                   onChange={handleChange} 
                   className="form-input"
                 />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Last Name</label>
+              </InputGroup>
+              <InputGroup label="Last Name" error={errors.lastName}>
                 <input 
                   name="lastName" 
                   placeholder="e.g. Doe" 
@@ -244,11 +323,10 @@ export default function EditResume() {
                   onChange={handleChange} 
                   className="form-input"
                 />
-              </div>
-            </div>
-            <div className="input-grid mt-4">
-              <div className="input-group">
-                <label className="input-label">Job Title</label>
+              </InputGroup>
+            </InputGrid>
+            <InputGrid className="mt-4">
+              <InputGroup label="Job Title">
                 <input 
                   name="jobTitle" 
                   placeholder="e.g. Software Engineer" 
@@ -256,9 +334,8 @@ export default function EditResume() {
                   onChange={handleChange} 
                   className="form-input"
                 />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Email</label>
+              </InputGroup>
+              <InputGroup label="Email" error={errors.email}>
                 <input 
                   name="email" 
                   type="email"
@@ -267,32 +344,27 @@ export default function EditResume() {
                   onChange={handleChange} 
                   className="form-input"
                 />
-              </div>
-            </div>
-            <div className="input-grid mt-4">
-              <div className="input-group">
-                <label className="input-label">Phone</label>
+              </InputGroup>
+            </InputGrid>
+            <InputGrid className="mt-4">
+              <InputGroup label="Phone">
                 <input name="phone" placeholder="e.g. +1 555 000 000" value={resumeData.phone} onChange={handleChange} className="form-input" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Location</label>
+              </InputGroup>
+              <InputGroup label="Location">
                 <input name="location" placeholder="e.g. New York, NY" value={resumeData.location} onChange={handleChange} className="form-input" />
-              </div>
-            </div>
-            <div className="input-grid mt-4">
-              <div className="input-group">
-                <label className="input-label">LinkedIn</label>
+              </InputGroup>
+            </InputGrid>
+            <InputGrid className="mt-4">
+              <InputGroup label="LinkedIn">
                 <input name="linkedIn" placeholder="linkedin.com/in/username" value={resumeData.linkedIn} onChange={handleChange} className="form-input" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">GitHub</label>
+              </InputGroup>
+              <InputGroup label="GitHub">
                 <input name="github" placeholder="github.com/username" value={resumeData.github} onChange={handleChange} className="form-input" />
-              </div>
-            </div>
-            <div className="input-group mt-4">
-              <label className="input-label">Portfolio Website</label>
+              </InputGroup>
+            </InputGrid>
+            <InputGroup label="Portfolio Website" className="mt-4">
               <input name="portfolio" placeholder="e.g. yourportfolio.com" value={resumeData.portfolio} onChange={handleChange} className="form-input" />
-            </div>
+            </InputGroup>
           </section>
 
           {/* Skills Section */}
@@ -326,7 +398,7 @@ export default function EditResume() {
           {/* Professional Summary */}
           <section>
             <h3 className="section-label">Summary</h3>
-            <div className="input-group">
+            <InputGroup>
               <textarea 
                 name="summary" 
                 rows="5"
@@ -335,445 +407,175 @@ export default function EditResume() {
                 onChange={handleChange} 
                 className="form-textarea"
               />
-            </div>
+            </InputGroup>
           </section>
 
           {/* Experience Section */}
-          <section>
-            <div className="section-header-row">
-              <h3 className="section-label !mb-0">Work Experience</h3>
-              <button 
-                type="button" 
-                onClick={addExperience}
-                className="add-button"
-              >
-                + Add Position
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {resumeData.experience.map((exp, index) => (
-                <div key={index} className="dynamic-item-card group">
-                  <button 
-                    type="button"
-                    onClick={() => removeExperience(index)}
-                    className="item-remove-btn"
-                  >
-                    ×
-                  </button>
-                  <div className="input-group mb-4">
-                    <label className="input-label">Job Title</label>
-                    <input 
-                      name="role" 
-                      value={exp.role} 
-                      onChange={(e) => handleExperienceChange(index, e)}
-                      placeholder="e.g. Senior Software Engineer"
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="input-grid mb-4">
-                    <div className="input-group">
-                      <label className="input-label">Company</label>
-                      <input 
-                        name="company" 
-                        value={exp.company} 
-                        onChange={(e) => handleExperienceChange(index, e)}
-                        placeholder="e.g. Google"
-                        className="form-input"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">Location</label>
-                      <input 
-                        name="location" 
-                        value={exp.location} 
-                        onChange={(e) => handleExperienceChange(index, e)}
-                        placeholder="e.g. Mountain View, CA"
-                        className="form-input"
-                      />
-                    </div>
-                  </div>
-                  <div className="input-grid">
-                    <div className="input-group">
-                      <label className="input-label">Start Date</label>
-                      <input 
-                        name="startDate" 
-                        value={exp.startDate} 
-                        onChange={(e) => handleExperienceChange(index, e)}
-                        placeholder="MM/YYYY"
-                        className="form-input"
-                      />
-                    </div>
-                    {!exp.isCurrent && (
-                      <div className="input-group">
-                        <label className="input-label">End Date</label>
-                        <input 
-                          name="endDate" 
-                          value={exp.endDate} 
-                          onChange={(e) => handleExperienceChange(index, e)}
-                          placeholder="MM/YYYY"
-                          className="form-input"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      name="isCurrent" 
-                      checked={exp.isCurrent} 
-                      onChange={(e) => handleExperienceChange(index, e)} 
-                      className="accent-brand-blue"
-                    />
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">I currently work here</span>
-                  </div>
-                  <div className="input-group mt-4">
-                    <label className="input-label">Role & Responsibilities</label>
-                    <textarea 
-                      name="description" 
-                      value={exp.description} 
-                      onChange={(e) => handleExperienceChange(index, e)}
-                      rows="3"
-                      placeholder="What did you achieve?"
-                      className="form-textarea"
-                    />
-                  </div>
+          <DynamicListSection 
+            title="Work Experience"
+            addLabel="+ Add Position"
+            onAdd={() => addItem('experience', { 
+              company: "", role: "", location: "", startDate: "", endDate: "", isCurrent: false, description: "" 
+            })}
+            items={resumeData.experience}
+            onRemove={(index) => removeItem('experience', index)}
+            emptyMessage="No experience added yet."
+            renderItem={(exp, index) => (
+              <>
+                <InputGroup label="Job Title" className="mb-4" error={errors.experience?.[index]?.role}>
+                  <input name="role" value={exp.role} onChange={(e) => handleDynamicChange('experience', index, e)} placeholder="e.g. Senior Software Engineer" className="form-input" />
+                </InputGroup>
+                <InputGrid className="mb-4">
+                  <InputGroup label="Company" error={errors.experience?.[index]?.company}>
+                    <input name="company" value={exp.company} onChange={(e) => handleDynamicChange('experience', index, e)} placeholder="e.g. Google" className="form-input" />
+                  </InputGroup>
+                  <InputGroup label="Location">
+                    <input name="location" value={exp.location} onChange={(e) => handleDynamicChange('experience', index, e)} placeholder="e.g. Mountain View, CA" className="form-input" />
+                  </InputGroup>
+                </InputGrid>
+                <InputGrid>
+                  <InputGroup label="Start Date" error={errors.experience?.[index]?.startDate}>
+                    <input name="startDate" value={exp.startDate} onChange={(e) => handleDynamicChange('experience', index, e)} placeholder="MM/YYYY" className="form-input" />
+                  </InputGroup>
+                  {!exp.isCurrent && (
+                    <InputGroup label="End Date">
+                      <input name="endDate" value={exp.endDate} onChange={(e) => handleDynamicChange('experience', index, e)} placeholder="MM/YYYY" className="form-input" />
+                    </InputGroup>
+                  )}
+                </InputGrid>
+                <div className="mt-3 flex items-center gap-2">
+                  <input type="checkbox" name="isCurrent" checked={exp.isCurrent} onChange={(e) => handleDynamicChange('experience', index, e)} className="accent-brand-blue" />
+                  <span className="text-[10px] font-bold text-gray-500 uppercase">I currently work here</span>
                 </div>
-              ))}
-              {resumeData.experience.length === 0 && (
-                <p className="text-center py-4 text-xs text-gray-400 italic">No experience added yet.</p>
-              )}
-            </div>
-          </section>
+                <InputGroup label="Role & Responsibilities" className="mt-4">
+                  <textarea name="description" value={exp.description} onChange={(e) => handleDynamicChange('experience', index, e)} rows="3" placeholder="What did you achieve?" className="form-textarea" />
+                </InputGroup>
+              </>
+            )}
+          />
 
           {/* Education Section */}
-          <section>
-            <div className="section-header-row">
-              <h3 className="section-label !mb-0">Education</h3>
-              <button 
-                type="button" 
-                onClick={addEducation}
-                className="add-button"
-              >
-                + Add Education
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {resumeData.education.map((edu, index) => (
-                <div key={index} className="dynamic-item-card group">
-                  <button 
-                    type="button"
-                    onClick={() => removeEducation(index)}
-                    className="item-remove-btn"
-                  >
-                    ×
-                  </button>
-                  <div className="input-grid mb-4">
-                    <div className="input-group">
-                      <label className="input-label">School / University</label>
-                      <input 
-                        name="school" 
-                        value={edu.school} 
-                        onChange={(e) => handleEducationChange(index, e)}
-                        placeholder="e.g. Stanford University"
-                        className="form-input"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">Location</label>
-                      <input 
-                        name="location" 
-                        value={edu.location} 
-                        onChange={(e) => handleEducationChange(index, e)}
-                        placeholder="e.g. Stanford, CA"
-                        className="form-input"
-                      />
-                    </div>
-                  </div>
-                  <div className="input-grid">
-                    <div className="input-group">
-                      <label className="input-label">Start Date</label>
-                      <input 
-                        name="startDate" 
-                        value={edu.startDate} 
-                        onChange={(e) => handleEducationChange(index, e)}
-                        placeholder="YYYY"
-                        className="form-input"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">End Date (or Expected)</label>
-                      <input 
-                        name="endDate" 
-                        value={edu.endDate} 
-                        onChange={(e) => handleEducationChange(index, e)}
-                        placeholder="YYYY"
-                        className="form-input"
-                      />
-                    </div>
-                  </div>
-                  <div className="input-group mt-4">
-                    <label className="input-label">Degree / Field of Study</label>
-                    <input 
-                      name="degree" 
-                      value={edu.degree} 
-                      onChange={(e) => handleEducationChange(index, e)}
-                      placeholder="e.g. B.S. in Computer Science"
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-              ))}
-              {resumeData.education.length === 0 && (
-                <p className="text-center py-4 text-xs text-gray-400 italic">No education added yet.</p>
-              )}
-            </div>
-          </section>
+          <DynamicListSection 
+            title="Education"
+            addLabel="+ Add Education"
+            onAdd={() => addItem('education', { 
+              school: "", degree: "", location: "", startDate: "", endDate: "" 
+            })}
+            items={resumeData.education}
+            onRemove={(index) => removeItem('education', index)}
+            emptyMessage="No education added yet."
+            renderItem={(edu, index) => (
+              <>
+                <InputGrid className="mb-4">
+                  <InputGroup label="School / University" error={errors.education?.[index]?.school}>
+                    <input name="school" value={edu.school} onChange={(e) => handleDynamicChange('education', index, e)} placeholder="e.g. Stanford University" className="form-input" />
+                  </InputGroup>
+                  <InputGroup label="Location">
+                    <input name="location" value={edu.location} onChange={(e) => handleDynamicChange('education', index, e)} placeholder="e.g. Stanford, CA" className="form-input" />
+                  </InputGroup>
+                </InputGrid>
+                <InputGrid>
+                  <InputGroup label="Start Date">
+                    <input name="startDate" value={edu.startDate} onChange={(e) => handleDynamicChange('education', index, e)} placeholder="YYYY" className="form-input" />
+                  </InputGroup>
+                  <InputGroup label="End Date (or Expected)">
+                    <input name="endDate" value={edu.endDate} onChange={(e) => handleDynamicChange('education', index, e)} placeholder="YYYY" className="form-input" />
+                  </InputGroup>
+                </InputGrid>
+                <InputGroup label="Degree / Field of Study" className="mt-4" error={errors.education?.[index]?.degree}>
+                  <input name="degree" value={edu.degree} onChange={(e) => handleDynamicChange('education', index, e)} placeholder="e.g. B.S. in Computer Science" className="form-input" />
+                </InputGroup>
+              </>
+            )}
+          />
+
+          {/* Certifications Section */}
+          <DynamicListSection 
+            title="Certifications"
+            addLabel="+ Add Certification"
+            onAdd={() => addItem('certifications', { 
+              name: "", issuer: "", date: "" 
+            })}
+            items={resumeData.certifications}
+            onRemove={(index) => removeItem('certifications', index)}
+            emptyMessage="No certifications added yet."
+            renderItem={(cert, index) => (
+              <>
+                <InputGroup label="Certification Name" error={errors.certifications?.[index]?.name}>
+                  <input name="name" value={cert.name} onChange={(e) => handleDynamicChange('certifications', index, e)} placeholder="e.g. AWS Certified Solutions Architect" className="form-input" />
+                </InputGroup>
+                <InputGrid className="mt-4">
+                  <InputGroup label="Issuer">
+                    <input name="issuer" value={cert.issuer} onChange={(e) => handleDynamicChange('certifications', index, e)} placeholder="e.g. Amazon Web Services" className="form-input" />
+                  </InputGroup>
+                  <InputGroup label="Date">
+                    <input name="date" value={cert.date} onChange={(e) => handleDynamicChange('certifications', index, e)} placeholder="MM/YYYY" className="form-input" />
+                  </InputGroup>
+                </InputGrid>
+              </>
+            )}
+          />
 
           {/* Projects Section */}
-          <section>
-            <div className="section-header-row">
-              <h3 className="section-label !mb-0">Key Projects</h3>
-              <button 
-                type="button" 
-                onClick={addProject}
-                className="add-button"
-              >
-                + Add Project
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {resumeData.projects.map((proj, index) => (
-                <div key={index} className="dynamic-item-card group">
-                  <button 
-                    type="button"
-                    onClick={() => removeProject(index)}
-                    className="item-remove-btn"
-                  >
-                    ×
-                  </button>
-                  <div className="input-grid">
-                    <div className="input-group">
-                      <label className="input-label">Project Title</label>
-                      <input 
-                        name="title" 
-                        value={proj.title} 
-                        onChange={(e) => handleProjectChange(index, e)}
-                        placeholder="e.g. Resume Builder"
-                        className="form-input"
-                      />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label">Link (Optional)</label>
-                      <input 
-                        name="link" 
-                        value={proj.link} 
-                        onChange={(e) => handleProjectChange(index, e)}
-                        placeholder="e.g. github.com/my-repo"
-                        className="form-input"
-                      />
-                    </div>
-                  </div>
-                  <div className="input-group mt-4">
-                    <label className="input-label">Description</label>
-                    <textarea 
-                      name="description" 
-                      value={proj.description} 
-                      onChange={(e) => handleProjectChange(index, e)}
-                      rows="3"
-                      placeholder="Built using React 19 and Tailwind CSS..."
-                      className="form-textarea"
-                    />
-                  </div>
-                </div>
-              ))}
-              {resumeData.projects.length === 0 && (
-                <p className="text-center py-4 text-xs text-gray-400 italic">No projects added yet.</p>
-              )}
-            </div>
-          </section>
+          <DynamicListSection 
+            title="Key Projects"
+            addLabel="+ Add Project"
+            onAdd={() => addItem('projects', { 
+              title: "", link: "", description: "" 
+            })}
+            items={resumeData.projects}
+            onRemove={(index) => removeItem('projects', index)}
+            emptyMessage="No projects added yet."
+            renderItem={(proj, index) => (
+              <>
+                <InputGrid>
+                  <InputGroup label="Project Title">
+                    <input name="title" value={proj.title} onChange={(e) => handleDynamicChange('projects', index, e)} placeholder="e.g. Resume Builder" className="form-input" />
+                  </InputGroup>
+                  <InputGroup label="Link (Optional)">
+                    <input name="link" value={proj.link} onChange={(e) => handleDynamicChange('projects', index, e)} placeholder="e.g. github.com/my-repo" className="form-input" />
+                  </InputGroup>
+                </InputGrid>
+                <InputGroup label="Description" className="mt-4">
+                  <textarea name="description" value={proj.description} onChange={(e) => handleDynamicChange('projects', index, e)} rows="3" placeholder="Built using React 19 and Tailwind CSS..." className="form-textarea" />
+                </InputGroup>
+              </>
+            )}
+          />
 
           {/* Custom Sections */}
-          <section>
-            <div className="section-header-row">
-              <h3 className="section-label !mb-0">Custom Sections</h3>
-              <button 
-                type="button" 
-                onClick={addCustomSection}
-                className="add-button"
-              >
-                + Add Section
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {resumeData.customSections.map((sec, index) => (
-                <div key={index} className="dynamic-item-card group">
-                  <button 
-                    type="button"
-                    onClick={() => removeCustomSection(index)}
-                    className="item-remove-btn"
-                  >
-                    ×
-                  </button>
-                  <div className="input-group">
-                    <label className="input-label">Section Title</label>
-                    <input name="title" value={sec.title} onChange={(e) => handleCustomSectionChange(index, e)} placeholder="e.g. Languages or Certifications" className="form-input" />
-                  </div>
-                  <div className="input-group mt-4">
-                    <label className="input-label">Content</label>
-                    <textarea name="description" value={sec.description} onChange={(e) => handleCustomSectionChange(index, e)} rows="3" placeholder="Enter details..." className="form-textarea" />
-                  </div>
-                </div>
-              ))}
-              {resumeData.customSections.length === 0 && (
-                <p className="text-center py-4 text-xs text-gray-400 italic">No custom sections added yet.</p>
-              )}
-            </div>
-          </section>
+          <DynamicListSection 
+            title="Custom Sections"
+            addLabel="+ Add Section"
+            onAdd={() => addItem('customSections', { 
+              title: "", description: "" 
+            })}
+            items={resumeData.customSections}
+            onRemove={(index) => removeItem('customSections', index)}
+            emptyMessage="No custom sections added yet."
+            renderItem={(sec, index) => (
+              <>
+                <InputGroup label="Section Title">
+                  <input name="title" value={sec.title} onChange={(e) => handleDynamicChange('customSections', index, e)} placeholder="e.g. Languages or Certifications" className="form-input" />
+                </InputGroup>
+                <InputGroup label="Content" className="mt-4">
+                  <textarea name="description" value={sec.description} onChange={(e) => handleDynamicChange('customSections', index, e)} rows="3" placeholder="Enter details..." className="form-textarea" />
+                </InputGroup>
+              </>
+            )}
+          />
         </form>
       </div>
 
       {/* Right Side: Real-time Preview */}
-      <div className={`preview-column custom-scrollbar ${activeView === 'form' ? 'hidden lg:flex' : 'flex'} flex-col items-center pt-0`}>
-        {/* Semantic Header for Preview Controls */}
-        <header className="preview-controls">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setActiveView('form')}
-              className="lg:hidden px-4 py-1.5 bg-white text-gray-600 border border-gray-200 text-xs font-bold rounded-lg shadow-sm active:scale-95 transition-all"
-            >
-              ← Back
-            </button>
-            
-            {/* Size Controls */}
-            <div className="zoom-controls">
-              <button type="button" onClick={() => setZoom(Math.max(0.4, zoom - 0.1))} className="zoom-btn">−</button>
-              <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-              <button type="button" onClick={() => setZoom(Math.min(1.5, zoom + 0.1))} className="zoom-btn">+</button>
-            </div>
-          </div>
-
-          <button 
-            type="button" 
-            onClick={handleDownloadPDF} 
-            className="download-btn"
-          >
-            Download PDF
-          </button>
-        </header>
-
-        <div 
-          className="resume-preview-wrapper"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
-        >
-          <div className="resume-paper" id="resume-paper-target" ref={resumeRef}>
-            <header className="preview-header">
-              <h1 className="preview-name">
-                {resumeData.firstName || "Your"} {resumeData.lastName || "Name"}
-              </h1>
-              <p className="preview-job-title">{resumeData.jobTitle || "Professional Title"}</p>
-              <div className="preview-contact-grid">
-                <div className="contact-item">{resumeData.email || "hello@example.com"}</div>
-                {resumeData.phone && <div className="contact-item">{resumeData.phone}</div>}
-                {resumeData.location && <div className="contact-item">{resumeData.location}</div>}
-                {resumeData.linkedIn && <div className="contact-item">{resumeData.linkedIn}</div>}
-                {resumeData.github && <div className="contact-item">{resumeData.github}</div>}
-                {resumeData.portfolio && <div className="contact-item">{resumeData.portfolio}</div>}
-              </div>
-            </header>
-
-            <div className="preview-body-layout">
-              {/* Main Column */}
-              <div className="preview-main-column">
-                <section className="mb-8">
-                  <h2 className="preview-section-title">Professional Profile</h2>
-                  <p className="preview-text">{resumeData.summary || "Summary goes here..."}</p>
-                </section>
-
-                {resumeData.experience.length > 0 && (
-                  <section className="mb-8">
-                    <h2 className="preview-section-title border-b border-gray-100 pb-1">Experience</h2>
-                    <div className="space-y-6 mt-4">
-                      {resumeData.experience.map((exp, index) => (
-                        <div key={index} className="animate-classy-fade">
-                          <div className="preview-item-header">
-                            <h3 className="preview-item-title">{exp.role || "Job Title"}</h3>
-                            <span className="preview-date">{exp.startDate} — {exp.isCurrent ? "Present" : exp.endDate}</span>
-                          </div>
-                          <div className="preview-item-subtitle mb-2">{exp.company}{exp.location && `, ${exp.location}`}</div>
-                          <p className="preview-text !text-[11px]">{exp.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {resumeData.projects.length > 0 && (
-                  <section className="mb-8">
-                    <h2 className="preview-section-title border-b border-gray-100 pb-1">Key Projects</h2>
-                    <div className="space-y-4 mt-4">
-                      {resumeData.projects.map((proj, index) => (
-                        <div key={index} className="animate-classy-fade">
-                          <div className="preview-item-header">
-                            <h3 className="preview-item-title text-sm">{proj.title || "Project Title"}</h3>
-                            {proj.link && <span className="preview-date underline text-brand-blue">{proj.link}</span>}
-                          </div>
-                          <p className="preview-text !text-[11px]">{proj.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </div>
-
-              {/* Sidebar Column */}
-              <div className="preview-sidebar">
-                {resumeData.skills.length > 0 && (
-                  <section className="mb-8">
-                    <h2 className="preview-section-title">Skills</h2>
-                    <div className="flex flex-col gap-2">
-                      {resumeData.skills.map((skill, index) => (
-                        <div key={index} className="text-[11px] font-bold text-gray-700 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 bg-brand-blue rounded-full" />
-                          {skill}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {resumeData.education.length > 0 && (
-                  <section className="mb-8">
-                    <h2 className="preview-section-title">Education</h2>
-                    <div className="space-y-5">
-                      {resumeData.education.map((edu, index) => (
-                        <div key={index} className="animate-classy-fade">
-                          <div className="font-bold text-gray-900 text-xs leading-tight mb-1">{edu.degree || "Degree"}</div>
-                          <div className="text-brand-blue font-bold text-[10px] leading-tight mb-1">{edu.school}</div>
-                          <div className="text-gray-400 text-[9px] font-black uppercase tracking-tighter">{edu.startDate} — {edu.endDate}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {resumeData.customSections.map((sec, index) => (
-                  sec.title && (
-                    <section key={index} className="mb-8 animate-classy-fade">
-                      <h2 className="preview-section-title">{sec.title}</h2>
-                      <p className="preview-text !text-[10px]">{sec.description}</p>
-                    </section>
-                  )
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ResumePreview 
+        resumeData={resumeData}
+        activeView={activeView}
+        setActiveView={setActiveView}
+        zoom={zoom}
+        setZoom={setZoom}
+        resumeRef={resumeRef}
+      />
     </div>
   );
 }

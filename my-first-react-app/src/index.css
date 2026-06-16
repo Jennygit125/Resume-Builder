@@ -1,10 +1,37 @@
 @import "tailwindcss";
 
+:root {
+  --background: rgb(249, 250, 251); /* gray-50 */
+  --foreground: rgb(17, 24, 39); /* gray-900 */
+  --card: rgb(255, 255, 255);
+  --border: rgb(229, 231, 235); /* gray-200 */
+}
+
+/* Global Inversion Theme Logic */
+html {
+  transition: filter 0.3s ease;
+}
+
+html.dark {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 @theme {
   /* Customizing your colors */
-  --color-brand-blue: #0f8fca;
+  --color-brand-blue: rgb(15, 143, 202);
   --color-auth-blue: rgba(12, 67, 131, 0.712);
   --color-button-hover: rgb(30, 61, 221);
+  --color-gray-600: rgb(75, 85, 99);
+  --color-gray-200: rgb(229, 231, 235);
+  --color-red-500: rgb(239, 68, 68);
+  --color-red-600: rgb(220, 38, 38);
+
+  /* Semantic aliases for utilities like bg-app-bg and text-app-text */
+  --color-app-bg: var(--background);
+  --color-app-text: var(--foreground);
+  --color-app-card: var(--card);
+  --color-app-border: var(--border);
+  --color-app-muted: rgb(156, 163, 175); /* gray-400 */
 
   /* Customizing fonts */
   --font-sans: "Inter", ui-sans-serif, system-ui;
@@ -25,9 +52,24 @@
   }
 }
 
-body {
-  @apply font-sans bg-gray-50 text-gray-900;
+@utility no-invert {
+  /* Define the utility logic directly */
+  html.dark & {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  /* If an image is inside a no-invert container (like the preview-column), 
+     it would be inverted twice (cancelling out). We ensure it stays natural. */
+  html.dark & img {
+    filter: none;
+  }
 }
 
-/* Import your template-specific styles */
+body {
+  @apply font-sans bg-app-bg text-app-text;
+}
+
+/* Import template-specific styles after theme/utilities so @apply works correctly */
+@import "./components/Inputs/ResumeInput.css";
+@import "./pages/ResumeUpdate/Forms/preview.css";
 @import "./components/Templates/Runners.css";

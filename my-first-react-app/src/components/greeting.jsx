@@ -24,7 +24,7 @@ function Greeting() {
               Build My Resume Now
             </Link>
             <Link 
-              to="/services" 
+              to="#services" 
               className="px-8 py-4 bg-white text-gray-700 font-bold rounded-full border border-gray-200 hover:bg-gray-50 transition-all text-lg"
             >
               View Templates

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { api } from '../../utils/api';
+import { api } from '../../utils/api.js';
 
 const SignUpForm = ({ onSwitch }) => {
   const [formData, setFormData] = useState({

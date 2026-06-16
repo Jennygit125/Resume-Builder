@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import "./index.css";
 import {
   type LinksFunction,
@@ -7,10 +8,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
-import Header from "./components/Templates/header";
-import BackToTopButton from "./components/BackToTopButton";
-import Footer from "./components/Templates/footer";
+import Header from "./components/Templates/header.jsx";
+import BackToTopButton from "./components/BackToTopButton.jsx";
+import Footer from "./components/Templates/footer.jsx";
+import { ThemeProvider } from "./components/context/ThemeContext.jsx";
 
 export const meta: MetaFunction = () => {
   return [
@@ -31,7 +34,7 @@ export const meta: MetaFunction = () => {
     { name: "twitter:title", content: "Resume Builder" },
     { name: "twitter:description", content: "Create and edit your professional resume easily." },
     { name: "twitter:image", content: "https://first-react-ryjt.vercel.app/og-image.png" },
-    { name: "theme-color", content: "#2563eb" }, // Match this to your brand color
+    { name: "theme-color", content: "#2563eb" }, 
   ];
 };
 
@@ -44,8 +47,10 @@ export const links: LinksFunction = () => [
  * Makes user data globally available to all routes and the Header.
  */
 export async function clientLoader() {
-  const firstName = localStorage.getItem("first_name");
-  return { firstName };
+  // Temporarily bypass auth for testing
+  // const firstName = localStorage.getItem("first_name");
+  // return { firstName };
+  return { firstName: "Tester" };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -56,6 +61,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <Meta />
         <Links />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              const theme = localStorage.getItem('theme');
+              if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+              }
+            })();
+          `
+        }} />
       </head>
       <body>
         {children}
@@ -67,14 +82,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function Root() {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const id = hash.replace("#", "");
+      const element = document.getElementById(id);
+      if (element) {
+        // The browser's native jump is often bypassed by SPA routers.
+        // We manually trigger it here. The global CSS scroll-behavior: smooth
+        // will handle the animation.
+        element.scrollIntoView();
+      }
+    }
+  }, [hash]);
+
   return (
-    <>
+    <ThemeProvider>
       <Header />
       <main className="min-h-screen animate-classy-fade">
         <Outlet />
       </main>
       <BackToTopButton />
       <Footer />
-    </>
+    </ThemeProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useRevalidator } from 'react-router';
-import { api } from '../../utils/api';
+import { api } from '../../utils/api.js';
 
 function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
     const navigate = useNavigate();
