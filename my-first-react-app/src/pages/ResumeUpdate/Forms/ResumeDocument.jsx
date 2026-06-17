@@ -5,8 +5,8 @@ Font.register({
   family: 'Inter',
   fonts: [
     // Self-host Inter fonts for maximum reliability in PDF generation
-    { src: '/fonts/inter/Inter-VariableFont_opsz,wght.ttf', fontWeight: 400 },
-
+    { src: '/fonts/inter/Inter-Regular.ttf', fontWeight: 400 },
+    { src: '/fonts/inter/Inter-Bold.ttf', fontWeight: 700 },
   ]
 });
 
