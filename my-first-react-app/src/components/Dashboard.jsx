@@ -3,6 +3,8 @@ import { useLoaderData, useNavigate, redirect, Link, useRevalidator } from "reac
 import { useLogout } from "../utils/auth.js";
 import { requireAuth, handleAuthError } from "../utils/authGuard.js";
 import { api } from '../utils/api.js';
+import { pdf } from '@react-pdf/renderer';
+import ResumeDocument from "../pages/ResumeUpdate/Forms/ResumeDocument.jsx";
 
 
 /**
@@ -111,6 +113,7 @@ export default function Dashboard() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(null); // Tracks ID of resume being downloaded
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -173,6 +176,24 @@ export default function Dashboard() {
       revalidator.revalidate();
     } catch (error) {
       console.error("Duplicate failed:", error);
+    }
+  };
+
+  const handleDownload = async (resume) => {
+    setIsDownloading(resume.id);
+    try {
+      // Requirement: Create PDF first from the stored JSON data
+      const blob = await pdf(<ResumeDocument data={resume.content} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${resume.content.firstName || 'Resume'}_CV.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+    } finally {
+      setIsDownloading(null);
     }
   };
 
@@ -278,6 +299,18 @@ export default function Dashboard() {
                       <Link to={`/dashboard/edit/${resume.id}`} className="p-2 text-gray-400 hover:text-brand-blue transition-colors" title="Edit">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </Link>
+                      <button 
+                        onClick={() => handleDownload(resume)}
+                        disabled={isDownloading === resume.id}
+                        className="p-2 text-gray-400 hover:text-brand-blue transition-colors disabled:opacity-50" 
+                        title="Download PDF"
+                      >
+                        {isDownloading === resume.id ? (
+                          <div className="w-5 h-5 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        )}
+                      </button>
                       <button 
                         onClick={() => handleDuplicate(resume.id)}
                         className="p-2 text-gray-400 hover:text-brand-blue transition-colors" 

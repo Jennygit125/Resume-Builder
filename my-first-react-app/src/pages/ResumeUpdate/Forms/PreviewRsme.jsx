@@ -1,6 +1,7 @@
 import { usePDF } from '@react-pdf/renderer';
 import { useState, useEffect } from 'react';
 import ResumeDocument from './ResumeDocument.jsx';
+import { api } from '../../../utils/api.js';
 
 export default function ResumePreview({ 
   resumeData, 
@@ -51,7 +52,19 @@ export default function ResumePreview({
     return () => clearInterval(interval);
   }, [instance.loading]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    // Requirement: Ensure Cloudinary image is generated before download
+    // If profilePic is still a base64 string, we must save to get the Cloudinary URL
+    if (resumeData.profilePic?.startsWith('data:image')) {
+      try {
+        await api.saveResume(resumeData);
+      } catch (err) {
+        console.error("Failed to sync image to Cloudinary before download:", err);
+        // We proceed with the local image if the save fails to not block the user,
+        // but the 'official' saveResume logic handles the Cloudinary conversion.
+      }
+    }
+
     if (instance.url) {
       const link = document.createElement('a');
       link.href = instance.url;

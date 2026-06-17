@@ -1,0 +1,1 @@
+import{n as e}from"./authGuard-2V17XP2n.js";async function t(){return await e()}export{t as clientLoader};

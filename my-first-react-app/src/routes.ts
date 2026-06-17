@@ -6,8 +6,8 @@ export default [
   // Protected Dashboard Group
   route("dashboard", "components/AuthGuard.jsx", [
     index("components/Dashboard.jsx"),
-    route("new", "components/Inputs/ResumeInput.jsx"),
-    route("edit/:id", "components/Inputs/ResumeInput.jsx"),
+    route("new", "components/Inputs/ResumeInput.jsx", { id: "resume-new" }),
+    route("edit/:id", "components/Inputs/ResumeInput.jsx", { id: "resume-edit" }),
   ]),
 
   // Guest Only Routes (Login/Signup)

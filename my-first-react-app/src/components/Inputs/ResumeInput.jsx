@@ -133,10 +133,16 @@ export default function EditResume() {
     if (validateForm()) {
       setSaveStatus('saving');
       try {
-        await api.saveResume(resumeData);
+        const savedResume = await api.saveResume(resumeData);
         setSaveStatus('success');
         localStorage.removeItem("resume_draft"); // Clear draft on successful save
         
+        // If this was a new resume, update the URL to the edit path 
+        // so subsequent saves update the same record.
+        if (!id && savedResume?.id) {
+          navigate(`/dashboard/edit/${savedResume.id}`, { replace: true });
+        }
+
         // Allow the user to see the success state before navigating
         setTimeout(() => navigate("/dashboard"), 1500);
       } catch (err) {

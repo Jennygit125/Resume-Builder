@@ -198,7 +198,7 @@ export const api = {
     if (imageUrl.startsWith('data:image')) {
       const formData = new FormData();
       formData.append('file', resumeData.profilePic);
-      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_PRESET);
+      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_PRESET || "");
 
       const cloudRes = await fetch(
         `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
