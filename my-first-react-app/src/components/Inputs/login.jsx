@@ -41,36 +41,32 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
       const { data, error } = await supabase.auth.signInWithPassword({
         email: username,
         password: password,
-        options: {
-          // Set session persistence based on rememberMe checkbox
-          shouldCreateUser: false, // Only sign in existing users
-          persistSession: rememberMe, // 'session' or 'local'
-        },
       });
 
       if (error) throw error;
 
-      if (data.session) {
-        const firstName = data.user.user_metadata.firstName || username;
+      if (!data.session) throw new Error("Authentication failed: No session returned.");
 
-        localStorage.setItem("access_token", data.session.access_token);
-        localStorage.setItem("refresh_token", data.session.refresh_token);
-        localStorage.setItem("first_name", firstName);
+      // Support for both email/password metadata and OAuth (which often uses full_name)
+      const firstName = data.user.user_metadata?.firstName || data.user.user_metadata?.full_name || username;
 
-        // Trigger revalidation so the Root loader (and the Header) picks up the new name
-        revalidator.revalidate();
+      // High-quality UX: Use sessionStorage if 'Remember Me' is unchecked
+      const storage = rememberMe ? localStorage : sessionStorage;
+
+      storage.setItem("access_token", data.session.access_token);
+      storage.setItem("refresh_token", data.session.refresh_token);
+      storage.setItem("first_name", firstName);
+
+      // Trigger revalidation so the Root loader (and the Header) picks up the new name
+      revalidator.revalidate();
+      
+      const timestamp = new Date().getTime();
+      const newEntry = { id: timestamp, user: firstName, time: new Date().toLocaleTimeString(), remembered: rememberMe ? "Yes" : "No" };
+      const updatedHistory = [newEntry, ...loginHistory].slice(0, 5);
+      setLoginHistory(updatedHistory);
+      localStorage.setItem("login_history", JSON.stringify(updatedHistory));
         
-        const timestamp = new Date().getTime();
-        const newEntry = { id: timestamp, user: firstName, time: new Date().toLocaleTimeString(), remembered: rememberMe ? "Yes" : "No" };
-        const updatedHistory = [newEntry, ...loginHistory].slice(0, 5);
-        setLoginHistory(updatedHistory);
-        localStorage.setItem("login_history", JSON.stringify(updatedHistory));
-        
-        navigate("/dashboard");
-      } else {
-        // Handle backend-specific error messages (e.g. 401 Unauthorized)
-        setLoginError(data.message || 'Invalid username or password.');
-      }
+      navigate("/dashboard");
     } catch (error) {
       console.error('Login Error details:', error);
       setLoginError(error.message || 'Network error: please check your connection.');

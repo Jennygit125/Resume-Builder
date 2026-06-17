@@ -133,8 +133,10 @@ function Header() {
                 viewTransition
                 className={() => {
                   // For hash links, check if the current location's hash matches the link's hash
-                  // We ignore NavLink's `isActive` for hash links as it only checks pathname
-                  const isHashActive = location.hash === link.hash;
+                  // Improvement: Default to #home if no hash is present and we're at root
+                  const currentHash = location.hash || "#home";
+                  const isHashActive = currentHash === link.hash && location.pathname === "/";
+                  
                   return isHashActive ? "nav-link active" : "nav-link";
                 }}
               >

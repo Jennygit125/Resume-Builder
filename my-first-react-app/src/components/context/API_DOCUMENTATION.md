@@ -19,7 +19,7 @@ This application is a **Full-Stack Serverless** architecture using Supabase (DB/
 ---
 
 ## Resumes
-**Supabase Table:** `public.resumes`
+**Table Schema:** `public.resumes (id, user_id, title, content jsonb, status, last_modified)`
 
 ### List Resumes
 - **Client Call:** `api.getResumes()`
@@ -27,7 +27,7 @@ This application is a **Full-Stack Serverless** architecture using Supabase (DB/
 - **Response:**
   ```json
   [
-    { "id": "uuid", "user_id": "uuid", "title": "Job Title", "content": { ... }, "status": "Draft/Completed", "last_modified": "ISO-DATE" }
+    { "id": "uuid", "title": "Software Engineer", "last_modified": "ISO-DATE", "status": "Completed", "content": { ... } }
   ]
   ```
 
