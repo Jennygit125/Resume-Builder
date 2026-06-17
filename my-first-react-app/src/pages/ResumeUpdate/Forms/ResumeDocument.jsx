@@ -4,9 +4,9 @@ import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/
 Font.register({
   family: 'Inter',
   fonts: [
-    // Self-host Inter fonts for maximum reliability in PDF generation
-    { src: '/fonts/inter/Inter-Regular.ttf', fontWeight: 400 },
-    { src: '/fonts/inter/Inter-Bold.ttf', fontWeight: 700 },
+    // Using static TTF files from a CDN to ensure correct format and availability
+    { src: 'https://cdn.jsdelivr.net/gh/googlefonts/inter@3.19/docs/font-files/Inter-Regular.ttf', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/gh/googlefonts/inter@3.19/docs/font-files/Inter-Bold.ttf', fontWeight: 700 },
   ]
 });
 
