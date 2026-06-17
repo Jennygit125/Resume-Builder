@@ -134,6 +134,12 @@ export default function EditResume() {
       setSaveStatus('saving');
       try {
         const savedResume = await api.saveResume(resumeData);
+        
+        // Sync local state with the returned Cloudinary URL and DB ID
+        if (savedResume?.content) {
+          setResumeData({ ...savedResume.content, id: savedResume.id });
+        }
+        
         setSaveStatus('success');
         localStorage.removeItem("resume_draft"); // Clear draft on successful save
         

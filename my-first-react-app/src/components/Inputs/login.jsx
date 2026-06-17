@@ -38,18 +38,14 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
     }, 1000);
 
     try {
-      // TESTER BYPASS LOGIC
-      if (username === "Tester") {
-        localStorage.setItem("access_token", "mock_token");
-        localStorage.setItem("first_name", "Tester");
-        revalidator.revalidate();
-        navigate("/dashboard");
-        return;
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: username,
         password: password,
+        options: {
+          // Set session persistence based on rememberMe checkbox
+          shouldCreateUser: false, // Only sign in existing users
+          persistSession: rememberMe, // 'session' or 'local'
+        },
       });
 
       if (error) throw error;
