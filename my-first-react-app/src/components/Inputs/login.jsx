@@ -38,8 +38,24 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
     }, 1000);
 
     try {
+      let loginEmail = identifier;
+
+      // Check if the identifier is a username (no '@' symbol)
+      if (!identifier.includes('@')) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('username', identifier)
+          .single();
+
+        if (profileError || !profile) {
+          throw new Error("No account found with that username.");
+        }
+        loginEmail = profile.email;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: identifier,
+        email: loginEmail,
         password: password,
       });
 
