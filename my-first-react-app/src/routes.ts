@@ -10,7 +10,10 @@ export default [
     route("edit/:id", "components/Inputs/ResumeInput.jsx"),
   ]),
 
-  route("auth", "pages/Auth/LoginPage.jsx"),
+  // Guest Only Routes (Login/Signup)
+  route("auth", "components/GuestGuard.jsx", [
+    index("pages/Auth/LoginPage.jsx"),
+  ]),
 
   route("about", "pages/About.jsx"),
   route("services", "pages/Services.jsx"),
