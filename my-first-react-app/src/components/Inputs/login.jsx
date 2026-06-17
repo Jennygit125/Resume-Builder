@@ -61,7 +61,11 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
         revalidator.revalidate();
         
         const timestamp = new Date().getTime();
-        setLoginHistory((prevHistory) => [{ id: timestamp, user: firstName, time: new Date().toLocaleTimeString(), remembered: rememberMe ? "Yes" : "No" }, ...prevHistory]);
+        const newEntry = { id: timestamp, user: firstName, time: new Date().toLocaleTimeString(), remembered: rememberMe ? "Yes" : "No" };
+        const updatedHistory = [newEntry, ...loginHistory].slice(0, 5);
+        setLoginHistory(updatedHistory);
+        localStorage.setItem("login_history", JSON.stringify(updatedHistory));
+        
         navigate("/dashboard");
       } else {
         // Handle backend-specific error messages (e.g. 401 Unauthorized)
@@ -69,7 +73,7 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
       }
     } catch (error) {
       console.error('Login Error details:', error);
-      setLoginError('Network error: server down ?');
+      setLoginError(error.message || 'Network error: please check your connection.');
     } finally {
       clearInterval(timer);
       setProgress(0);

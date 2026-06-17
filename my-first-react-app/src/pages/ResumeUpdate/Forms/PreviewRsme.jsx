@@ -65,6 +65,8 @@ export default function ResumePreview({
         console.error("Failed to sync image to Cloudinary before download:", err);
         // We proceed with the local image if the save fails to not block the user,
         // but the 'official' saveResume logic handles the Cloudinary conversion.
+      } finally {
+        setIsPending(false);
       }
     }
 
