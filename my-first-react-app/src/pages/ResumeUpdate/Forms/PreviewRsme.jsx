@@ -57,7 +57,10 @@ export default function ResumePreview({
     // If profilePic is still a base64 string, we must save to get the Cloudinary URL
     if (resumeData.profilePic?.startsWith('data:image')) {
       try {
-        await api.saveResume(resumeData);
+        const saved = await api.saveResume(resumeData);
+        // If the save returns the new record, we could update state here if needed,
+        // but the 'instance' will naturally rebuild once resumeData updates in the parent.
+        console.log("Image synced to Cloudinary successfully.");
       } catch (err) {
         console.error("Failed to sync image to Cloudinary before download:", err);
         // We proceed with the local image if the save fails to not block the user,

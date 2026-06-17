@@ -94,12 +94,11 @@ export const api = {
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_PRESET;
 
     // If profilePic is a base64 string or new file, upload to Cloudinary
-    if (imageUrl.startsWith('data:image') && cloudName && uploadPreset) {
+    if (imageUrl.startsWith('data:image')) {
       if (!cloudName || !uploadPreset) {
         console.error("Cloudinary Configuration Missing: Ensure VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_PRESET are set.");
         throw new Error("Image upload service is currently unavailable.");
       }
-
       const formData = new FormData();
       formData.append('file', resumeData.profilePic);
       formData.append('upload_preset', uploadPreset);

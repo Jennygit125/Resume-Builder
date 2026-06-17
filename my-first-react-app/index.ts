@@ -47,8 +47,12 @@ Deno.serve(async (req) => {
     })
 
     const data = await response.json()
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+      throw new Error('Invalid response structure from OpenAI')
+    }
+    
     const resumeData = JSON.parse(data.choices[0].message.content)
-
     return new Response(JSON.stringify(resumeData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
