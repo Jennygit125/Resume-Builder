@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { isTokenExpired, refreshAccessToken } from "./auth.js";
+import { supabase } from "./api.js";
 
 /**
  * Logic to protect routes at the loader level.
@@ -8,10 +9,21 @@ import { isTokenExpired, refreshAccessToken } from "./auth.js";
 export async function requireAuth() {
   let accessToken = localStorage.getItem("access_token");
   const refreshToken = localStorage.getItem("refresh_token");
-  const firstName = localStorage.getItem("first_name");
+  let firstName = localStorage.getItem("first_name");
 
-  // If we don't even have a name, the user isn't logged in at all
-  if (!firstName) {
+  // OAuth Sync: If tokens exist but firstName is missing, sync from Supabase metadata
+  if (!firstName && accessToken) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      firstName = user.user_metadata?.firstName || user.user_metadata?.full_name || "User";
+      localStorage.setItem("first_name", firstName);
+      // Also ensure access_token is synced if it came from the session internally
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) localStorage.setItem("access_token", session.access_token);
+    }
+  }
+
+  if (!firstName && !accessToken) {
     clearAuthStorage();
     throw redirect("/auth");
   }

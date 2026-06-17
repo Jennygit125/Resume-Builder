@@ -25,7 +25,7 @@ function Header() {
   
   // Logic fix: Only treat as logged in if we have a name AND a token.
   // This prevents showing 'Logout' when localStorage has stale name data but no active session.
-  const isUserLoggedIn = !!(rootData?.firstName && localStorage.getItem("access_token"));
+  const isUserLoggedIn = !!(rootData?.firstName || localStorage.getItem("access_token"));
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
