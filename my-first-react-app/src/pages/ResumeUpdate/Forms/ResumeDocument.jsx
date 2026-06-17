@@ -20,7 +20,9 @@ const styles = StyleSheet.create({
   header: {
     textAlign: 'center',
     marginBottom: 20,
-    borderBottom: '2pt solid rgba(15, 159, 202, 0.13)',
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(15, 159, 202, 0.13)',
+    borderBottomStyle: 'solid',
     paddingBottom: 20,
   },
   profilePic: {
