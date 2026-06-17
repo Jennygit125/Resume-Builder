@@ -1,14 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Defensive URL cleaning: Trim whitespace and remove trailing slashes
-// This prevents "Invalid path" errors common in Supabase Auth
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim().replace(/\/$/, "");
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// This prevents "Invalid path" errors common in Supabase Auth.
+// Ensure it's always a string, even if env var is undefined.
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseUrl = rawSupabaseUrl.trim().replace(/\/$/, "");
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ""; // Ensure it's always a string
 
 // Safeguard: Ensure environment variables are present
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase Error: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing from environment variables.");
-  if (import.meta.env.DEV) alert("Supabase environment variables missing!");
+if (supabaseUrl === "" || !supabaseUrl.startsWith("http")) {
+  console.error("Supabase Error: VITE_SUPABASE_URL is missing or invalid (must start with http).");
+  if (import.meta.env.DEV) alert("Supabase client initialization failed: Missing or invalid VITE_SUPABASE_URL.");
+  throw new Error("Supabase client initialization failed: Missing or invalid VITE_SUPABASE_URL.");
+}
+if (supabaseAnonKey === "") {
+  console.error("Supabase Error: VITE_SUPABASE_ANON_KEY is missing or invalid.");
+  if (import.meta.env.DEV) alert("Supabase client initialization failed: Missing or invalid VITE_SUPABASE_ANON_KEY.");
+  throw new Error("Supabase client initialization failed: Missing or invalid VITE_SUPABASE_ANON_KEY.");
 }
 
 // Initialize Supabase client

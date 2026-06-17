@@ -2,6 +2,16 @@ import { useNavigate, useRevalidator, redirect } from "react-router";
 import { supabase } from "./api.js";
 
 /**
+ * Helper to retrieve an item from either localStorage or sessionStorage.
+ */
+export const getAuthItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+
+/**
+ * Helper to determine which storage is currently holding the session.
+ */
+export const getAuthStorage = () => sessionStorage.getItem("access_token") ? sessionStorage : localStorage;
+
+/**
  * Checks if a JWT token is expired by decoding its payload.
  */
 export const isTokenExpired = (token) => {
@@ -44,8 +54,9 @@ export async function refreshAccessToken() {
       if (error) throw error;
       
       if (data.session) {
-        localStorage.setItem("access_token", data.session.access_token);
-        localStorage.setItem("refresh_token", data.session.refresh_token);
+        const storage = getAuthStorage();
+        storage.setItem("access_token", data.session.access_token);
+        storage.setItem("refresh_token", data.session.refresh_token);
         return data.session.access_token;
       }
       throw new Error("No session returned");
@@ -68,11 +79,13 @@ export function useLogout() {
     // 1. Notify Supabase to invalidate the session on the server
     await supabase.auth.signOut();
 
-    // Clear only authentication-related data to preserve app state (like history)
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("first_name");
-    localStorage.removeItem("username");
+    // 2. Clear both storage types to ensure clean slate
+    [localStorage, sessionStorage].forEach(s => {
+      s.removeItem("access_token");
+      s.removeItem("refresh_token");
+      s.removeItem("first_name");
+      s.removeItem("username");
+    });
 
     // Trigger revalidation so the Root loader (and Header) updates instantly
     revalidator.revalidate();

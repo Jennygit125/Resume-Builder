@@ -1,11 +1,6 @@
 import { redirect } from "react-router";
-import { isTokenExpired, refreshAccessToken } from "./auth.js";
+import { isTokenExpired, refreshAccessToken, getAuthItem, getAuthStorage } from "./auth.js";
 import { supabase } from "./api.js";
-
-/**
- * Helper to retrieve an item from either localStorage or sessionStorage.
- */
-const getAuthItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 /**
  * Logic to protect routes at the loader level.
@@ -16,19 +11,21 @@ export async function requireAuth() {
   const refreshToken = getAuthItem("refresh_token");
   let firstName = getAuthItem("first_name");
 
-  // OAuth Sync: If tokens exist but firstName is missing, sync from Supabase metadata
+  // OAuth Identity Sync: If tokens exist but firstName is missing (common after social login)
   if (!firstName && accessToken) {
-    const { data: { user } } = await supabase.auth.getUser();
+    // getUser() is more secure than getSession() as it verifies the JWT with the Supabase Auth server
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
     if (user) {
-      firstName = user.user_metadata?.firstName || user.user_metadata?.full_name || "User";
+      firstName = user.user_metadata?.firstName || user.user_metadata?.full_name || user.email?.split('@')[0] || "User";
       
-      // Determine which storage is currently active for this session
-      const storage = sessionStorage.getItem("access_token") ? sessionStorage : localStorage;
+      // Save the resolved identity back to the correct storage type
+      const storage = getAuthStorage();
       storage.setItem("first_name", firstName);
-
-      // Also ensure access_token is synced if it came from the session internally
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) storage.setItem("access_token", session.access_token);
+    } else if (error) {
+      console.error("Auth Guard: Failed to sync identity:", error.message);
+      clearAuthStorage();
+      throw redirect("/auth");
     }
   }
 
@@ -56,10 +53,13 @@ export async function requireAuth() {
 }
 
 function clearAuthStorage() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("first_name");
-  localStorage.removeItem("username");
+  [localStorage, sessionStorage].forEach(s => {
+    s.removeItem("access_token");
+    s.removeItem("refresh_token");
+    s.removeItem("first_name");
+    s.removeItem("username");
+    s.removeItem("login_history");
+  });
 }
 
 export function handleAuthError(error) {

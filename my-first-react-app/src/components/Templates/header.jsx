@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useRouteLoaderData, useLocation } from "react-router"; // Import useLocation
-import { useLogout, getTokenExp, refreshAccessToken } from "../../utils/auth.js"; // Add .js extension
+import { useLogout, getTokenExp, refreshAccessToken, getAuthItem } from "../../utils/auth.js"; // Add .js extension
 import { useTheme } from "../context/ThemeContext.jsx";
 import logo from "../../assets/cheque-svgrepo-com.svg";
 
@@ -61,7 +61,7 @@ function Header() {
     }
 
     const checkSession = () => {
-      const token = localStorage.getItem("access_token");
+      const token = getAuthItem("access_token");
       const exp = getTokenExp(token);
       if (!exp) return;
 
