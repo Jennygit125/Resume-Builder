@@ -11,6 +11,18 @@ export async function requireAuth() {
   const refreshToken = getAuthItem("refresh_token");
   let firstName = getAuthItem("first_name");
 
+  // Proactive Session Sync: If custom storage is empty, check if Supabase has a session (common after OAuth redirect)
+  if (!accessToken) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      accessToken = session.access_token;
+      // Default to localStorage for the synced session unless a session flag exists
+      const storage = localStorage; 
+      storage.setItem("access_token", session.access_token);
+      storage.setItem("refresh_token", session.refresh_token);
+    }
+  }
+
   // OAuth Identity Sync: If tokens exist but firstName is missing (common after social login)
   if (!firstName && accessToken) {
     // getUser() is more secure than getSession() as it verifies the JWT with the Supabase Auth server
