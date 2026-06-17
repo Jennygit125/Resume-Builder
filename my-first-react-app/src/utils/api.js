@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// Defensive URL cleaning: Trim whitespace and remove trailing slashes
+// This prevents "Invalid path" errors common in Supabase Auth
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim().replace(/\/$/, "");
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Safeguard: Ensure environment variables are present
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Supabase Error: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing from environment variables.");
+  if (import.meta.env.DEV) alert("Supabase environment variables missing!");
 }
 
 // Initialize Supabase client
