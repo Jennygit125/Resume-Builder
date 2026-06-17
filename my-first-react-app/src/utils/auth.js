@@ -19,7 +19,10 @@ export const isTokenExpired = (token) => {
   try {
     const [, payloadBase64] = token.split('.');
     const payload = JSON.parse(atob(payloadBase64));
-    return payload.exp * 1000 < Date.now();
+    
+    // Proactive Buffer: Treat as expired if there is less than 5 minutes (300,000ms) left.
+    // This ensures the user stays signed in seamlessly without hitting 401 errors.
+    return Date.now() >= (payload.exp * 1000 - 300000);
   } catch {
     return true;
   }
