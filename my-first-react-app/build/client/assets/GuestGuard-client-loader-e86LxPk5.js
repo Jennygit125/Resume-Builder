@@ -1,1 +1,0 @@
-import{E as e}from"./chunk-6CSD65Y2-DXbBV5eM.js";async function t(){let t=localStorage.getItem(`access_token`),n=localStorage.getItem(`first_name`);if(t&&n)throw e(`/dashboard`);return null}export{t as clientLoader};

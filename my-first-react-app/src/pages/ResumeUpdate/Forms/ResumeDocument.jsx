@@ -4,10 +4,9 @@ import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/
 Font.register({
   family: 'Inter',
   fonts: [
-    // Use Google Fonts API for more reliable font loading
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp5z.ttf', fontWeight: 400 }, // Regular
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp5z.ttf', fontWeight: 700 }, // Bold
-    { src: 'https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp5z.ttf', fontWeight: 900 }, // ExtraBold
+    // Self-host Inter fonts for maximum reliability in PDF generation
+    { src: '/fonts/inter/Inter-VariableFont_opsz,wght.ttfnter-Regular.ttf', fontWeight: 400 },
+
   ]
 });
 

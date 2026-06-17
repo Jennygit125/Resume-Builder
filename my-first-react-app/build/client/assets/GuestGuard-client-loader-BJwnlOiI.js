@@ -1,0 +1,1 @@
+import{E as e}from"./chunk-6CSD65Y2-DXbBV5eM.js";import{i as t,t as n}from"./auth-C-PSptho.js";async function r(){let r=n(`access_token`),i=n(`first_name`);if(r&&i&&!t(r))throw e(`/dashboard`);return null}export{r as clientLoader};
