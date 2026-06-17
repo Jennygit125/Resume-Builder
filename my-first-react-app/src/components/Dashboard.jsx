@@ -6,7 +6,6 @@ import { api } from '../utils/api.js';
 import { pdf } from '@react-pdf/renderer';
 import ResumeDocument from "../pages/ResumeUpdate/Forms/ResumeDocument.jsx";
 
-
 /**
  * Loading Skeleton that matches the Dashboard layout
  */
@@ -105,6 +104,7 @@ export async function clientLoader() {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const logout = useLogout();
   const loaderData = useLoaderData(); // Get data from the loader
   const revalidator = useRevalidator();
@@ -114,6 +114,7 @@ export default function Dashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDownloading, setIsDownloading] = useState(null); // Tracks ID of resume being downloaded
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -164,10 +165,31 @@ export default function Dashboard() {
     );
   }
 
-  const handleAiAction = async () => {
-    // Logic for AI generation call
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsAiLoading(true);
+    try {
+      const data = await api.generateAiResume(aiPrompt);
+      if (data) {
+        // Save to draft and navigate to the new resume page
+        localStorage.setItem("resume_draft", JSON.stringify(data));
+        setIsAiModalOpen(false);
+        navigate("/dashboard/new");
+      }
+    } catch (error) {
+      console.error("AI Generation Error:", error);
+      alert("Failed to generate resume. Please try again.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleAiAnalyze = async () => {
+    // Implementation for analysis 
+    // This usually requires selecting a specific resume first
+    alert("Analysis feature: Please select a resume from your list to analyze against this prompt.");
     setIsAiModalOpen(false);
-    alert("AI is crafting your resume. You will be notified when it's ready!");
+    setAiPrompt("");
   };
 
   const handleDuplicate = async (resumeId) => {
@@ -361,8 +383,16 @@ export default function Dashboard() {
                 className="w-full h-48 p-4 bg-app-bg border border-app-border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm resize-none mb-6"
               />
               <div className="flex gap-4">
-                <button onClick={handleAiAction} className="flex-1 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg active:scale-95">Generate with AI</button>
-                <button onClick={handleAiAction} className="flex-1 py-3 bg-white text-purple-600 border border-purple-200 font-bold rounded-xl hover:bg-purple-50 transition-all active:scale-95">Analyze Match</button>
+                <button 
+                  onClick={handleAiGenerate} 
+                  disabled={isAiLoading || !aiPrompt.trim()}
+                  className="flex-1 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                >
+                  {isAiLoading ? "Processing..." : "Generate with AI"}
+                </button>
+                <button onClick={handleAiAnalyze} className="flex-1 py-3 bg-white text-purple-600 border border-purple-200 font-bold rounded-xl hover:bg-purple-50 transition-all active:scale-95">
+                  Analyze Match
+                </button>
               </div>
             </div>
           </div>
