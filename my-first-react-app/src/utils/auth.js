@@ -64,7 +64,10 @@ export function useLogout() {
   const navigate = useNavigate();
   const revalidator = useRevalidator();
 
-  const logout = () => {
+  const logout = async () => {
+    // 1. Notify Supabase to invalidate the session on the server
+    await supabase.auth.signOut();
+
     // Clear only authentication-related data to preserve app state (like history)
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");

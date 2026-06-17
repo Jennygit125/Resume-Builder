@@ -1,6 +1,6 @@
 # API Documentation
 
-This application uses **Supabase** for database, authentication, and edge logic.
+This application is a **Full-Stack Serverless** architecture using Supabase (DB/Auth/Edge Functions) and Cloudinary (Media).
 
 ## Authentication
 (Handled via `@supabase/supabase-js`)
@@ -19,7 +19,7 @@ This application uses **Supabase** for database, authentication, and edge logic.
 ---
 
 ## Resumes
-**Table:** `public.resumes`
+**Table Schema:** `public.resumes (id, user_id, title, content jsonb, status, last_modified)`
 
 ### List Resumes
 - **Client Call:** `api.getResumes()`
@@ -27,7 +27,7 @@ This application uses **Supabase** for database, authentication, and edge logic.
 - **Response:**
   ```json
   [
-    { "id": "uuid", "title": "Software Engineer", "last_modified": "ISO-DATE", "status": "Completed" }
+    { "id": "uuid", "title": "Software Engineer", "last_modified": "ISO-DATE", "status": "Completed", "content": { ... } }
   ]
   ```
 

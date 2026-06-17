@@ -73,7 +73,7 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
       }
     } catch (error) {
       console.error('Login Error details:', error);
-      setLoginError('Network error: Is the backend server running at ' + (import.meta.env.VITE_API_BASE_URL || 'your configured API base URL') + '?');
+      setLoginError('Network error: server down ?');
     } finally {
       clearInterval(timer);
       setProgress(0);
