@@ -6,7 +6,7 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
     const navigate = useNavigate();
     const revalidator = useRevalidator();
     const [searchParams] = useSearchParams();
-    const [username, setUsername] = useState(defaultUsername || '');
+    const [identifier, setIdentifier] = useState(defaultUsername || '');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -20,7 +20,7 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
 
   // Sync username if registration provides a default value after mount
   useEffect(() => {
-    if (defaultUsername) setUsername(defaultUsername);
+    if (defaultUsername) setIdentifier(defaultUsername);
   }, [defaultUsername]);
 
   const handleSubmit = async (e) => {
@@ -39,7 +39,7 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: username,
+        email: identifier,
         password: password,
       });
 
@@ -48,7 +48,7 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
       if (!data.session) throw new Error("Authentication failed: No session returned.");
 
       // Support for both email/password metadata and OAuth (which often uses full_name)
-      const firstName = data.user.user_metadata?.firstName || data.user.user_metadata?.full_name || username;
+      const firstName = data.user.user_metadata?.firstName || data.user.user_metadata?.full_name || identifier;
 
       // High-quality UX: Use sessionStorage if 'Remember Me' is unchecked
       const storage = rememberMe ? localStorage : sessionStorage;
@@ -106,9 +106,9 @@ function LoginForm ({ onSwitch, onForgot, defaultUsername, successMessage }){
                 <h2 className="title">Login</h2>
 
                 <div className="inputGroup">
-                    <label htmlFor="username">Username</label>
-                    <input type="text" id="username" name="username" placeholder="Username or email" value={username}
-                    onChange={(e) => setUsername(e.target.value)} required/>
+                    <label htmlFor="identifier">Email</label>
+                    <input type="text" id="identifier" name="identifier" placeholder="Enter your email" value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)} required/>
                 </div>
 
                 <div className="inputGroup">
