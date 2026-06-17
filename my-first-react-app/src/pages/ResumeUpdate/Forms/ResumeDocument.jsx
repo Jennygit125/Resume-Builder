@@ -4,9 +4,9 @@ import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/
 Font.register({
   family: 'Inter',
   fonts: [
-    // Using static TTF files from a CDN to ensure correct format and availability
-    { src: 'https://cdn.jsdelivr.net/gh/googlefonts/inter@3.19/docs/font-files/Inter-Regular.ttf', fontWeight: 400 },
-    { src: 'https://cdn.jsdelivr.net/gh/googlefonts/inter@3.19/docs/font-files/Inter-Bold.ttf', fontWeight: 700 },
+    // Reverting to local paths to resolve Content Security Policy (CSP) violations
+    { src: '/fonts/inter/Inter-Regular.ttf', fontWeight: 400 },
+    { src: '/fonts/inter/Inter-Bold.ttf', fontWeight: 700 },
   ]
 });
 
@@ -106,6 +106,11 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginBottom: 4,
     fontWeight: 'bold',
+  },
+  linkText: { // New style for clickable links
+    fontSize: 9,
+    color: 'rgb(15, 159, 202)', // Example link color
+    textDecoration: 'underline',
   }
 });
 
@@ -160,7 +165,7 @@ export default function ResumeDocument({ data }) {
                   <View key={i} style={{ marginBottom: 10 }} wrap={false}>
                     <View style={styles.itemHeader}>
                       <Text style={styles.itemTitle}>{proj.title || ""}</Text>
-                      {proj.link && <Text style={styles.date}>{proj.link}</Text>}
+                      {proj.link && <Link src={proj.link} style={styles.linkText}>{proj.link}</Link>} {/* Make link clickable and use a dedicated style */}
                     </View>
                     <Text style={[styles.text, { fontSize: 9 }]}>{proj.description || ""}</Text>
                   </View>
