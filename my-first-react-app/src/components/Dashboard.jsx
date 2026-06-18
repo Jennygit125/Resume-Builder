@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLoaderData, useNavigate, redirect, Link, useRevalidator } from "react-router";
 import { useLogout } from "../utils/auth.js";
 import { requireAuth, handleAuthError } from "../utils/authGuard.js";
@@ -111,6 +111,10 @@ export default function Dashboard() {
   
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [selectedResumeIdForAnalysis, setSelectedResumeIdForAnalysis] = useState("");
+  const [animatedScore, setAnimatedScore] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDownloading, setIsDownloading] = useState(null); // Tracks ID of resume being downloaded
@@ -127,6 +131,32 @@ export default function Dashboard() {
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
+
+  // Handle the count-up animation for the AI Analysis score
+  useEffect(() => {
+    if (isAnalysisModalOpen && analysisResult) {
+      setAnimatedScore(0);
+      const target = analysisResult.score;
+      if (target === 0) return;
+
+      const duration = 1200; // 1.2 seconds for the animation
+      const startTime = Date.now();
+
+      const timer = setInterval(() => {
+        const timePassed = Date.now() - startTime;
+        let progress = timePassed / duration;
+        if (progress > 1) progress = 1;
+
+        // Cubic ease-out for a smooth finish
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        setAnimatedScore(Math.floor(easedProgress * target));
+
+        if (progress === 1) clearInterval(timer);
+      }, 16); // ~60fps
+
+      return () => clearInterval(timer);
+    }
+  }, [isAnalysisModalOpen, analysisResult]);
 
   // Safety Guard: Handle initial hydration where loader data might be null
   if (!loaderData) {
@@ -184,12 +214,20 @@ export default function Dashboard() {
     }
   };
 
-  const handleAiAnalyze = async () => {
-    // Implementation for analysis 
-    // This usually requires selecting a specific resume first
-    alert("Analysis feature: Please select a resume from your list to analyze against this prompt.");
-    setIsAiModalOpen(false);
-    setAiPrompt("");
+  const handleAiAnalyze = async (resumeId, jobDescription = null) => {
+    setIsAiLoading(true);
+    try {
+      const analysis = await api.analyzeResume(resumeId, jobDescription);
+      setAnalysisResult(analysis);
+      setIsAnalysisModalOpen(true);
+      setIsAiModalOpen(false); // Close the input modal if it was open
+      setAiPrompt("");
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      alert("Failed to analyze resume.");
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleDuplicate = async (resumeId) => {
@@ -327,7 +365,13 @@ export default function Dashboard() {
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-2 text-gray-400 hover:text-brand-blue transition-colors" title="Analyze"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg></button>
+                      <button 
+                        onClick={() => handleAiAnalyze(resume.id)}
+                        className="p-2 text-gray-400 hover:text-brand-blue transition-colors" 
+                        title="Analyze"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                      </button>
                       <Link to={`/dashboard/edit/${resume.id}`} className="p-2 text-gray-400 hover:text-brand-blue transition-colors" title="Edit">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </Link>
@@ -390,8 +434,24 @@ export default function Dashboard() {
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="e.g., I'm applying for a Senior React position at Google. Here is the job description..."
-                className="w-full h-48 p-4 bg-app-bg border border-app-border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm resize-none mb-6"
+                className="w-full h-40 p-4 bg-app-bg border border-app-border rounded-2xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm resize-none mb-4"
               />
+              
+              {resumes.length > 0 && (
+                <div className="mb-6 text-left">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Target Resume for Analysis</label>
+                  <select
+                    value={selectedResumeIdForAnalysis || resumes[0]?.id}
+                    onChange={(e) => setSelectedResumeIdForAnalysis(e.target.value)}
+                    className="w-full p-3 bg-app-bg border border-app-border rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 text-app-text appearance-none cursor-pointer"
+                  >
+                    {resumes.map(r => (
+                      <option key={r.id} value={r.id}>{r.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="flex gap-4">
                 <button 
                   onClick={handleAiGenerate} 
@@ -400,10 +460,70 @@ export default function Dashboard() {
                 >
                   {isAiLoading ? "Processing..." : "Generate with AI"}
                 </button>
-                <button onClick={handleAiAnalyze} className="flex-1 py-3 bg-white text-purple-600 border border-purple-200 font-bold rounded-xl hover:bg-purple-50 transition-all active:scale-95">
-                  Analyze Match
+                <button 
+                  onClick={() => handleAiAnalyze(selectedResumeIdForAnalysis || resumes[0]?.id, aiPrompt)}
+                  disabled={isAiLoading || !aiPrompt.trim() || !resumes.length}
+                  className="flex-1 py-3 bg-white text-purple-600 border border-purple-200 font-bold rounded-xl hover:bg-purple-50 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isAiLoading ? "Analyzing..." : "Analyze Match"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Analysis Results Modal */}
+      {isAnalysisModalOpen && analysisResult && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-app-card w-full max-w-2xl rounded-3xl shadow-2xl border border-app-border overflow-hidden">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black text-app-text tracking-tight">Analysis Results</h2>
+                <button onClick={() => setIsAnalysisModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold text-2xl">×</button>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-8 items-center md:items-start mb-8">
+                {/* Score Circle */}
+                <div className="relative flex-shrink-0">
+                  <svg className="w-32 h-32 transform -rotate-90">
+                    <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
+                    <circle 
+                      cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" 
+                      strokeDasharray={364.4}
+                      strokeDashoffset={364.4 - (364.4 * animatedScore) / 100}
+                      className="text-brand-blue" 
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-black text-app-text">{animatedScore}%</span>
+                    <span className="text-[8px] font-black uppercase text-gray-400 tracking-tighter">Match Score</span>
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Optimization Suggestions</h3>
+                  <div className="space-y-3">
+                    {analysisResult.suggestions?.length > 0 ? (
+                      analysisResult.suggestions.map((suggestion, idx) => (
+                        <div key={idx} className="flex gap-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                          <span className="text-brand-blue font-bold">•</span>
+                          {suggestion}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-400 italic text-sm">No specific suggestions. Your resume looks great!</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsAnalysisModalOpen(false)}
+                className="w-full py-3 bg-brand-blue text-white font-bold rounded-xl hover:bg-button-hover transition-all shadow-lg active:scale-95"
+              >
+                Got it, thanks!
+              </button>
             </div>
           </div>
         </div>

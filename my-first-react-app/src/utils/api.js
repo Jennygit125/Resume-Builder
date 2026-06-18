@@ -178,9 +178,9 @@ export const api = {
     return data?.improvedText;
   },
 
-  analyzeResume: async (resumeId) => {
+  analyzeResume: async (resumeId, jobDescription = null) => {
     const { data, error } = await supabase.functions.invoke('analyze-resume', {
-      body: { resumeId }
+      body: { resumeId, jobDescription }
     });
     if (error) throw error;
     return data;
