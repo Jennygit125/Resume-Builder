@@ -15,7 +15,6 @@ const styles = StyleSheet.create({
     padding: 40,
     fontSize: 11,
     color: 'rgb(51, 51, 51)',
-    fontFamily: 'Inter',
   },
   header: {
     textAlign: 'center',
@@ -116,10 +115,10 @@ const styles = StyleSheet.create({
   }
 });
 
-export default function ResumeDocument({ data }) {
+export default function ResumeDocument({ data, fontFamily = 'Inter' }) {
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={[styles.page, { fontFamily }]}>
         {/* Header */}
         <View style={styles.header}>
           {data.profilePic && (

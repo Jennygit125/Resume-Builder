@@ -1,5 +1,5 @@
 import { usePDF } from '@react-pdf/renderer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ResumeDocument from './ResumeDocument.jsx';
 import { api } from '../../../utils/api.js';
 
@@ -8,30 +8,44 @@ export default function ResumePreview({
   activeView, 
   setActiveView, 
   zoom, 
-  setZoom, 
-  resumeRef 
+  setZoom,
+  resumeRef,
+  onResumeDataUpdate // New prop: callback to update parent's resumeData
 }) {
-  const [instance, updateInstance] = usePDF({ document: <ResumeDocument data={resumeData} /> });
-  const [progress, setProgress] = useState(0);
-  const [isPending, setIsPending] = useState(false);
+  // State to track fallback to system fonts if custom fonts (Inter) fail to load/parse
+  const [fontFamily, setFontFamily] = useState('Inter');
+  
+  const [instance, updateInstance] = usePDF({ document: <ResumeDocument data={resumeData} fontFamily={fontFamily} /> });
+  const [showFontFallbackWarning, setShowFontFallbackWarning] = useState(false);
+  const [progress, setProgress] = useState(0); // For loading bar animation
+  const [isPdfUpdating, setIsPdfUpdating] = useState(false); // Indicates if PDF is being generated/debounced
+  const [downloadTriggered, setDownloadTriggered] = useState(false); // New state to trigger download sequence
+
+  // Ref to hold the latest resumeData for the download logic (e.g., filename)
+  const latestResumeDataRef = useRef(resumeData);
+  useEffect(() => {
+    latestResumeDataRef.current = resumeData;
+  }, [resumeData]);
 
   // Re-generate PDF instance with debouncing to improve performance while typing
   useEffect(() => {
-    setIsPending(true);
+    setIsPdfUpdating(true);
     const timer = setTimeout(() => {
-      updateInstance(<ResumeDocument data={resumeData} />);
-      setIsPending(false);
+      updateInstance(<ResumeDocument data={resumeData} fontFamily={fontFamily} />);
+      setIsPdfUpdating(false);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [resumeData, updateInstance]);
+  }, [resumeData, updateInstance, fontFamily]);
 
-  // Log generation errors for debugging
+  // Detect if generation failed due to font issues and fallback to Helvetica
   useEffect(() => {
-    if (instance.error) {
-      console.error("PDF Generation Error:", instance.error);
+    if (instance.error && fontFamily !== 'Helvetica') {
+      console.warn("PDF Font loading failed. Falling back to standard fonts.");
+      setFontFamily('Helvetica');
+      setShowFontFallbackWarning(true);
     }
-  }, [instance.error]);
+  }, [instance.error, fontFamily]);
 
   // Simulate progress percentage while the PDF engine is working
   useEffect(() => {
@@ -52,31 +66,36 @@ export default function ResumePreview({
     return () => clearInterval(interval);
   }, [instance.loading]);
 
+  // Effect to automatically download the PDF document once it is completely ready
+  useEffect(() => {
+    if (downloadTriggered && !instance.loading && !isPdfUpdating && instance.url) {
+      const link = document.createElement('a');
+      link.href = instance.url;
+      link.download = `${latestResumeDataRef.current.firstName || 'Resume'}_CV.pdf`;
+      link.click();
+      setDownloadTriggered(false);
+    }
+  }, [downloadTriggered, instance.loading, isPdfUpdating, instance.url]);
+
   const handleDownload = async () => {
     // Requirement: Ensure Cloudinary image is generated before download
     // If profilePic is still a base64 string, we must save to get the Cloudinary URL
     if (resumeData.profilePic?.startsWith('data:image')) {
       try {
+        setIsPdfUpdating(true);
         const saved = await api.saveResume(resumeData);
-        // If the save returns the new record, we could update state here if needed,
-        // but the 'instance' will naturally rebuild once resumeData updates in the parent.
+        if (onResumeDataUpdate) {
+          onResumeDataUpdate(saved);
+        }
         console.log("Image synced to Cloudinary successfully.");
       } catch (err) {
         console.error("Failed to sync image to Cloudinary before download:", err);
-        // We proceed with the local image if the save fails to not block the user,
-        // but the 'official' saveResume logic handles the Cloudinary conversion.
-      } finally {
-        setIsPending(false);
       }
     }
-
-    if (instance.url) {
-      const link = document.createElement('a');
-      link.href = instance.url;
-      link.download = `${resumeData.firstName || 'Resume'}_CV.pdf`;
-      link.click();
-    }
+    setDownloadTriggered(true);
   };
+
+  const isDownloadButtonDisabled = isPdfUpdating || instance.loading || downloadTriggered;
 
   return (
     <div className={`preview-column custom-scrollbar ${activeView === 'form' ? 'hidden lg:flex' : 'flex'} flex-col items-center pt-0`}>
@@ -95,7 +114,7 @@ export default function ResumePreview({
           <div className="zoom-controls">
             <button type="button" onClick={() => setZoom(Math.max(0.4, zoom - 0.1))} className="zoom-btn">−</button>
             <div className="flex items-center gap-2 min-w-[50px] justify-center">
-              {isPending && <div className="w-3 h-3 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />}
+              {(isPdfUpdating || instance.loading) && <div className="w-3 h-3 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />}
               <span className="zoom-label">{Math.round(zoom * 100)}%</span>
             </div>
             <button type="button" onClick={() => setZoom(Math.min(1.5, zoom + 0.1))} className="zoom-btn">+</button>
@@ -105,7 +124,7 @@ export default function ResumePreview({
         <button 
           type="button"
           onClick={handleDownload}
-          disabled={isPending || instance.loading}
+          disabled={isDownloadButtonDisabled}
           className="download-btn relative overflow-hidden group min-w-[140px]"
         >
           {instance.loading && (
@@ -114,11 +133,17 @@ export default function ResumePreview({
               style={{ width: `${progress}%` }}
             />
           )}
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            {isPending ? 'Syncing...' : instance.loading ? `Preparing ${Math.round(progress)}%` : 'Download PDF'}
+          <span className="relative z-10 flex items-center justify-center gap-2"> {/* Use combined loading state */}
+            {downloadTriggered ? 'Preparing for Download...' : (isPdfUpdating || instance.loading) ? `Preparing ${Math.round(progress)}%` : 'Download PDF'}
           </span>
         </button>
       </header>
+
+      {showFontFallbackWarning && (
+        <div className="w-full max-w-xl p-3 my-2 bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs rounded-lg text-center shadow-sm">
+          <strong>Font Warning:</strong> The custom font could not be loaded. The PDF will use a standard font to ensure it can be downloaded.
+        </div>
+      )}
 
       <div 
         className="resume-preview-wrapper" 

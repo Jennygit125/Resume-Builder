@@ -204,8 +204,17 @@ export default function Dashboard() {
   const handleDownload = async (resume) => {
     setIsDownloading(resume.id);
     try {
-      // Requirement: Create PDF first from the stored JSON data
-      const blob = await pdf(<ResumeDocument data={resume.content} />).toBlob();
+      let blob;
+      try {
+        // Primary attempt with custom fonts
+        blob = await pdf(<ResumeDocument data={resume.content} />).toBlob();
+      } catch (fontError) {
+        console.warn("Custom font rendering failed, retrying with default font...", fontError);
+        alert("The custom font for this resume failed to load. A standard font will be used for the PDF download instead.");
+        // Fallback attempt with standard PDF font (Helvetica)
+        blob = await pdf(<ResumeDocument data={resume.content} fontFamily="Helvetica" />).toBlob();
+      }
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -213,7 +222,8 @@ export default function Dashboard() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("PDF generation failed:", error);
+      console.error("Critical PDF generation failure:", error);
+      alert("Could not generate PDF. Please try again later.");
     } finally {
       setIsDownloading(null);
     }
