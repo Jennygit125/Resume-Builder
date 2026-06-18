@@ -1,0 +1,1 @@
+import{n as e}from"./authGuard-Bzl-L6i6.js";async function t(){return await e()}export{t as clientLoader};
