@@ -6,7 +6,7 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="footer-content">
-        <p>&copy; {currentYear} Your Company Name. All rights reserved.</p>
+        <p>&copy; {currentYear} The_thrill.io All rights reserved.</p>
         <ul className="footer-links">
           <li><Link to="/privacy">Privacy Policy</Link></li>
           <li><Link to="/terms">Terms of Service</Link></li>
