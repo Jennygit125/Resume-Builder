@@ -7,7 +7,7 @@ export default function NotFound() {
       <div className="absolute">
         <h2 className="text-3xl font-bold mb-2">Lost in the veil?</h2>
         <p className="text-gray-600 mb-8 max-w-sm">
-          The page you are looking for doesn't exist or has been moved to another dimension.
+        This service is currently Unavailable contact thrill.codex@gmail.com for more info.
         </p>
         <Link
           to="/"
