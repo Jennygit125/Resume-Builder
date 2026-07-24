@@ -1,0 +1,18 @@
+{
+  "src/assets/cheque-svgrepo-com.svg": {
+    "file": "assets/cheque-svgrepo-com-BiUjAhtv.svg",
+    "src": "src/assets/cheque-svgrepo-com.svg"
+  },
+  "virtual:react-router/server-build": {
+    "file": "index.js",
+    "name": "server-build",
+    "src": "virtual:react-router/server-build",
+    "isEntry": true,
+    "css": [
+      "assets/server-build-NmhSueuF.css"
+    ],
+    "assets": [
+      "assets/cheque-svgrepo-com-BiUjAhtv.svg"
+    ]
+  }
+}

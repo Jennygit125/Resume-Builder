@@ -10,6 +10,7 @@ import {
   ScrollRestoration,
   useLocation,
 } from "react-router";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import Header from "./components/Templates/header.jsx";
 import BackToTopButton from "./components/BackToTopButton.jsx";
 import Footer from "./components/Templates/footer.jsx";
@@ -74,6 +75,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <SpeedInsights />
         <ScrollRestoration />
         <Scripts />
       </body>
